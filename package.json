@@ -7,7 +7,8 @@
   "license": "ISC",
   "main": "src/index.js",
   "scripts": {
-    "start": "webpack-dev-server",
+    "start": "node app.js",
+    "start-dev": "webpack-dev-server",
     "test": "echo \"Error: no test specified\" && exit 1",
     "heroku-postbuild": "webpack -p --config ./webpack.config.js --progress"
   },
@@ -25,6 +26,8 @@
     "babel-plugin-transform-es3-property-literals": "^6.22.0",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
+    "copy-webpack-plugin": "^4.5.1",
+    "express": "^4.16.2",
     "webpack": "^3.11.0",
     "webpack-dev-server": "^2.11.1"
   }

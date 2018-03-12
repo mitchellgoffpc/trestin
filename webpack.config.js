@@ -1,5 +1,6 @@
-var path = require('path')
-var webpack = require('webpack')
+const path = require('path')
+const webpack = require('webpack')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = {
     entry: './src/index.js',
@@ -21,6 +22,14 @@ module.exports = {
                   plugins: [
                       'transform-do-expressions',
                       'transform-class-properties' ]}}]},
+
+    plugins: [
+        new webpack.optimize.UglifyJsPlugin({
+            minimize: true,
+            compress: { warnings: false }}),
+
+        new CopyWebpackPlugin([{
+            from: './src/static' }])],
 
     stats: { colors: true },
     devtool: 'source-map' }
