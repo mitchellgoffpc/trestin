@@ -1,11 +1,17 @@
 import { vec2 as v2,
          vec3 as v3 } from 'gl-matrix'
 
+// Math utility class
 class M {
-    static clamp = (x, a, b) => Math.max(a, Math.min(b, x))
     static fromValues = (...args) => new Chain (...args)
-}
+    static clamp = (x, a, b) => Math.max(a, Math.min(b, x))
 
+    static getDirectionVector = rotation =>
+        M.fromValues (-Math.sin(rotation[0]) * Math.cos(rotation[1]),
+                      -Math.sin(rotation[1]),
+                       Math.cos(rotation[0]) * Math.cos(rotation[1])) }
+
+// Helper class for chaining together vector / matrix operations
 class Chain {
     constructor (...args) {
         if (args.length == 1) {
@@ -26,7 +32,7 @@ class Chain {
                 return new Chain (result)
             }.bind(this) }}
 
-    value = () => this._value
-}
+    value = () => this._value }
+
 
 export default M
