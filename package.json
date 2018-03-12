@@ -1,7 +1,8 @@
 {
   "name": "trestin",
   "version": "1.0.0",
-  "description": "fun with webgl",
+  "description": "Experiments with WebGL",
+  "repository": "https://github.com/mitchellgoffpc/trestin.git",
   "author": "Mitchell Goff",
   "license": "ISC",
   "main": "src/index.js",
