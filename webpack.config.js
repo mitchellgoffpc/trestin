@@ -16,7 +16,11 @@ module.exports = {
         loaders: [
             { test: /\.js$/,
               loader: 'babel-loader',
-              query: { presets: ['es2015'] }}]},
+              query: {
+                  presets: ['es2015'],
+                  plugins: [
+                      'transform-do-expressions',
+                      'transform-class-properties' ]}}]},
 
     stats: { colors: true },
     devtool: 'source-map' }
