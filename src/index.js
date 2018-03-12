@@ -66,8 +66,8 @@ function main () {
 
     let move = direction => v3.add(position, position, direction.scale(0.2).value())
     let handlers = {
-        16: () => move (M.fromValues (0, -1, 0)),
-        32: () => move (M.fromValues (0, +1, 0)),
+        16: () => move (M.fromValues (0, +1, 0)),
+        32: () => move (M.fromValues (0, -1, 0)),
         65: forward => move (forward.cross (v3.fromValues (0, -1, 0))),
         68: forward => move (forward.cross (v3.fromValues (0, +1, 0))),
         83: forward => move (forward.negate ()),
