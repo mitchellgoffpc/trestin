@@ -24,12 +24,7 @@ module.exports = {
                       'transform-class-properties' ]}}]},
 
     plugins: [
-        new webpack.optimize.UglifyJsPlugin({
-            minimize: true,
-            compress: { warnings: false }}),
-
-        new CopyWebpackPlugin([{
-            from: './src/static' }])],
+        new CopyWebpackPlugin([{ from: './src/static' }])],
 
     stats: { colors: true },
     devtool: 'source-map' }
