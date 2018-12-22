@@ -7,9 +7,9 @@ class M {
     static clamp = (x, a, b) => Math.max(a, Math.min(b, x))
 
     static getDirectionVector = rotation =>
-        M.fromValues (-Math.sin(rotation[0]) * Math.cos(rotation[1]),
-                      -Math.sin(rotation[1]),
-                       Math.cos(rotation[0]) * Math.cos(rotation[1])) }
+        M.fromValues (-Math.sin(rotation.x) * Math.cos(rotation.y),
+                      -Math.sin(rotation.y),
+                       Math.cos(rotation.x) * Math.cos(rotation.y)) }
 
 // Helper class for chaining together vector / matrix operations
 class Chain {

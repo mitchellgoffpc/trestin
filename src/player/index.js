@@ -1,53 +1,77 @@
-import { vec2 as v2, vec3 as v3 } from 'gl-matrix'
+import _ from 'lodash'
+import * as Three from 'three'
 
-import M from 'util/math'
+const UP = new Three.Vector3 (0, 1, 0)
+const DOWN = new Three.Vector3 (0, -1, 0)
+const SQUARE = new Three.Vector3 (1, 0, 1)
 
 
 // Player class
 class Player {
-    position = v3.fromValues(0, 0, -20)
-    rotation = v2.fromValues(0, 0)
-
     constructor (streams) {
-        this.initializePointerHandlers (streams)
-        this.initializeKeyboardHandlers (streams) }
+        let aspectRatio = window.innerWidth / window.innerHeight
+        this.camera = new Three.PerspectiveCamera (75, aspectRatio, 0.1, 1000)
+        this.camera.position.z = 5
 
-    move = direction =>
-        v3.add (this.position, this.position, direction.scale(0.2).value())
+        this.initializePointerHandlers (streams)
+        this.initializeKeyboardHandlers (streams)
+        streams.resize.onValue (this.handleResizeCamera) }
+
+    handleResizeCamera = () => {
+        this.camera.aspect = window.innerWidth / window.innerHeight
+        this.camera.updateProjectionMatrix () }
 
     // Initialize event stream handlers
-    initializePointerHandlers (streams) {
-        streams.gazeMove.onValue (e => {
-            let yLimit = Math.PI / 2 - 0.0001
-            let dx = this.rotation[0] + e.movementX / 500,
-                dy = this.rotation[1] + e.movementY / 500
-            let rx = dx % (Math.PI * 2),
-                ry = M.clamp (dy, -yLimit, yLimit)
-            v2.set (this.rotation, rx, ry) })}
+    initializePointerHandlers = streams => {
+        let initialRotation = new Three.Vector2 (0, 0)
+        let yLimit = Math.PI / 2 - 0.0001
 
-    initializeKeyboardHandlers (streams) {
+        this.rotation = streams.mouseMove
+            .filter (streams.controlsEnabled)
+            .reduce (initialRotation, (rotation, e) => {
+                let dx = rotation.x - e.movementY / 500
+                let dy = rotation.y - e.movementX / 500
+                let rx = dx % (Math.PI * 2)
+                let ry = M.clamp (dy, -yLimit, yLimit)
+                return new Three.Vector2 (rx, ry) })
+
+        this.rotation.onValue (gaze => {
+            this.camera.rotation.x = gaze.x
+            this.camera.rotation.y = gaze.y }) }
+
+    initializeKeyboardHandlers = streams => {
+        let initialPosition = new Three.Vector3 (0, 0, 5)
         let handlers = {
-            16: () => this.move (M.fromValues (0, -1, 0)),
-            32: () => this.move (M.fromValues (0, +1, 0)),
-            65: forward => this.move (forward.cross (v3.fromValues (0, -1, 0))),
-            68: forward => this.move (forward.cross (v3.fromValues (0, +1, 0))),
-            83: forward => this.move (forward.negate ()),
-            87: forward => this.move (forward) }
+            16: () => DOWN,
+            32: () => UP,
+            65: forward => forward.cross (DOWN),
+            68: forward => forward.cross (UP),
+            83: forward => forward.negate (),
+            87: forward => forward }
 
-        for (var key in handlers) {
-            let keyCode = parseInt(key)
-            let down = streams.keyDown.filter(e => e.which == keyCode)
-            let up = streams.keyUp.filter(e => e.which == keyCode)
-            let moving = down.awaiting (up)
-                             .sampledBy (streams.timer)
-                             .filter (Boolean)
+        let movementStreams = _.keys(handlers).map (key => {
+            let keyCode = parseInt (key)
+            let down = streams.keyDown.filter (e => e.which == keyCode)
+            let up = streams.keyUp.filter (e => e.which == keyCode)
 
-            moving.onValue(e => {
-                let forward = M.getDirectionVector (this.rotation)
-                    .multiply (v3.fromValues (1, 0, 1))
-                    .normalize ()
+            return down.awaiting  (up)
+                       .filter    (streams.controlsEnabled)
+                       .sampledBy (streams.timer)
+                       .map       (this.rotation)
+                       .map       (rotation => {
+                           let forward = M.getDirectionVector (rotation)
+                                          .multiply (SQUARE)
+                                          .normalize ()
 
-                handlers[keyCode] (forward) })} }}
+                           return handlers[keyCode] (forward) })})
+
+        Bacon.mergeAll (movementStreams)
+             .reduce   (initialPosition, (position, direction) =>
+                position.addScaledVector (direction, 0.2))
+             .onValue  (position => {
+                this.camera.position.x = position.x
+                this.camera.position.y = position.y
+                this.camera.position.z = position.z }) }}
 
 
 export default Player

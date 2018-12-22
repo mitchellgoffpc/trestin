@@ -1,15 +1,18 @@
 import Bacon from 'baconjs'
 
 // Initialize some global event streams
-export function initializeEventStreams (canvas) {
-    canvas.onclick = () => canvas.requestPointerLock()
+export function initializeEventStreams () {
+    let pointerLockChange = Bacon.fromEvent(document, "pointerlockchange")
+    let controlsEnabled = pointerLockChange.map(controlsAreEnabled).toProperty()
 
-    let mouseMove = Bacon.fromEvent (document, "mousemove")
-    let gazeMove = mouseMove.filter (e =>
-        document.pointerLockElement === canvas)
+    return { controlsEnabled,
+             mouseMove: Bacon.fromEvent (document, "mousemove"),
+             mouseDown: Bacon.fromEvent (document, "mousedown"),
+             keyDown:   Bacon.fromEvent (document, "keydown"),
+             keyUp:     Bacon.fromEvent (document, "keyup"),
+             resize:    Bacon.fromEvent (window, "resize"),
+             timer:     Bacon.interval (15, null) }}
 
-    return {
-        mouseMove, gazeMove,
-        keyDown:   Bacon.fromEvent (document, "keydown"),
-        keyUp:     Bacon.fromEvent (document, "keyup"),
-        timer:     Bacon.interval (15, null) }}
+
+// Helper functions
+let controlsAreEnabled = () => document.pointerLockElement === document.body
