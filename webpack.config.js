@@ -21,12 +21,7 @@ module.exports = {
         rules: [{
             test: /\.js$/,
             exclude: /node_modules/,
-            use: {
-                loader: 'babel-loader',
-                options: {
-                    presets: ['es2015'],
-                    plugins: ['transform-do-expressions',
-                              'transform-class-properties']}}}]},
+            use: { loader: 'babel-loader' }}]},
 
     plugins: [
         new CopyWebpackPlugin([{ from: './src/static' }])],

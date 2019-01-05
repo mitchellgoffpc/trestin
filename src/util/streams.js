@@ -11,7 +11,7 @@ export function initializeEventStreams () {
              keyDown:   Bacon.fromEvent (document, "keydown"),
              keyUp:     Bacon.fromEvent (document, "keyup"),
              resize:    Bacon.fromEvent (window, "resize"),
-             timer:     Bacon.interval (15, null) }}
+             timer:     Bacon.interval (10, null) }}
 
 
 // Helper functions

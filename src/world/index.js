@@ -1,12 +1,21 @@
+import _ from 'lodash'
+import * as Three from 'three'
+
 import Chunk from 'chunk'
 
 
-class World {
+export default class World {
     chunks = {}
 
-    constructor () { }
+    constructor () {
+        this.chunks['0,0,0'] = new Chunk(0, 0, 0)
+        this.chunks['-1,0,-1'] = new Chunk(-1, 0, -1)
+        this.ambientLight = new Three.AmbientLight (0x404040) }
 
-    render () { }}
-
-
-export default World
+    getScene = () => {
+        let scene = new Three.Scene ()
+        scene.background = new Three.Color (0xADCCFF)
+        scene.add (this.ambientLight)
+        _.forEach (this.chunks, chunk => chunk.populate (scene))
+        return scene }
+}
