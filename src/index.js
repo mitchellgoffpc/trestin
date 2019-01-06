@@ -10,8 +10,8 @@ window.onload = () => {
     let renderer = new Three.WebGLRenderer ({ antialias: true })
 
     let streams = initializeEventStreams ()
-    let player = new Player (streams)
     let world = new World ()
+    let player = new Player (streams, world)
 
     // A little housekeeping
     renderer.setSize (window.innerWidth, window.innerHeight)
@@ -20,7 +20,7 @@ window.onload = () => {
     // Render loop
     function draw () {
         requestAnimationFrame (draw)
-        renderer.render (world.getScene (), player.camera) }
+        renderer.render (world.scene, player.camera) }
 
     draw ()
 

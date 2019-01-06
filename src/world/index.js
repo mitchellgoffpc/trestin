@@ -5,17 +5,26 @@ import Chunk from 'chunk'
 
 
 export default class World {
-    chunks = {}
+    raycaster = new Three.Raycaster ()
+    scene = new Three.Scene ()
+
+    chunks = {
+        '0,0,0':   new Chunk(0, 0, 0),
+        '-1,0,-1': new Chunk(-1, 0, -1) }
 
     constructor () {
-        this.chunks['0,0,0'] = new Chunk(0, 0, 0)
-        this.chunks['-1,0,-1'] = new Chunk(-1, 0, -1)
-        this.ambientLight = new Three.AmbientLight (0x404040) }
+        this.scene.background = new Three.Color (0xADCCFF)
+        this.scene.add (new Three.AmbientLight (0x404040))
+        _.forEach (this.chunks, chunk => chunk.populate (this.scene)) }
 
-    getScene = () => {
-        let scene = new Three.Scene ()
-        scene.background = new Three.Color (0xADCCFF)
-        scene.add (this.ambientLight)
-        _.forEach (this.chunks, chunk => chunk.populate (scene))
-        return scene }
+    // Helper functions
+    getIntersections = (position, direction) => {
+        this.raycaster.set (position, direction)
+        return this.raycaster.intersectObjects (this.scene.children) }
+
+    getClosestIntersection = (position, direction) =>
+        _.chain  (this.getIntersections (position, direction))
+         .sortBy ('distance')
+         .first  ()
+         .value  ()
 }
