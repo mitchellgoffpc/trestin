@@ -5,9 +5,13 @@ export function initializeEventStreams () {
     let pointerLockChange = Bacon.fromEvent(document, "pointerlockchange")
     let controlsEnabled = pointerLockChange.map(controlsAreEnabled).toProperty()
 
-    return { controlsEnabled,
+    let mouseDown = Bacon.fromEvent (document, "mousedown")
+    let leftClickDown  = mouseDown.filter (e => e.which === 1)
+    let rightClickDown = mouseDown.filter (e => e.which === 3)
+
+    return { controlsEnabled, mouseDown,
+             leftClickDown, rightClickDown,
              mouseMove: Bacon.fromEvent (document, "mousemove"),
-             mouseDown: Bacon.fromEvent (document, "mousedown"),
              keyDown:   Bacon.fromEvent (document, "keydown"),
              keyUp:     Bacon.fromEvent (document, "keyup"),
              resize:    Bacon.fromEvent (window, "resize"),

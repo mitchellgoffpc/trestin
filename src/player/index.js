@@ -3,6 +3,7 @@ import Bacon from 'baconjs'
 import * as Three from 'three'
 
 import M from 'util/math'
+import Directions from 'world/directions'
 
 // Constants
 const UP = new Three.Vector3 (0, 1, 0)
@@ -35,7 +36,12 @@ export default class Player {
         this.streams.resize.onValue (this.handleResizeCamera)
         this.streams.movement.onValue (this.handleMoveCamera)
         this.streams.rotation.onValue (this.handleRotateCamera)
-        this.streams.crosshair.onValue (this.handleHighlightCrosshairs) }
+
+        this.streams.placeBlock.onValue (this.handlePlaceBlock)
+        this.streams.destroyBlock.onValue (this.handleDestroyBlock)
+        this.streams.crosshairTarget.diff    (null, (previous, next) => [previous, next])
+                                    .onValue (this.handleHighlightCrosshairTarget) }
+
 
     // Create the event streams for this player
 
@@ -43,7 +49,10 @@ export default class Player {
         this.streams = { ...streams }
         this.streams.rotation = this.createRotationStream (this.streams)
         this.streams.movement = this.createMovementStream (this.streams)
-        this.streams.crosshair = this.createCrosshairStream (this.streams) }
+
+        this.streams.crosshairTarget = this.createCrosshairTargetStream (this.streams)
+        this.streams.destroyBlock = this.createDestroyBlockStream (this.streams)
+        this.streams.placeBlock = this.createPlaceBlockStream (this.streams) }
 
     createRotationStream = streams =>
         streams.mouseMove.filter (streams.controlsEnabled)
@@ -66,11 +75,19 @@ export default class Player {
         return Bacon.mergeAll (movementStreams)
                     .scan     (initialPosition, this.getNewPosition) }
 
-    createCrosshairStream = streams =>
+    createCrosshairTargetStream = streams =>
         Bacon.combineAsArray (streams.movement, streams.rotation)
              .skip (1)
              .map  (([position, gaze]) => this.world.getClosestIntersection (position, gaze))
-             .diff (null, (previous, next) => [previous, next])
+
+    createPlaceBlockStream = streams =>
+        streams.leftClickDown.filter (streams.controlsEnabled)
+                             .map    (streams.crosshairTarget)
+
+    createDestroyBlockStream = streams =>
+        streams.rightClickDown.filter (streams.controlsEnabled)
+                              .map    (streams.crosshairTarget)
+
 
     // Event stream handlers
 
@@ -86,18 +103,29 @@ export default class Player {
         this.camera.position.y = position.y
         this.camera.position.z = position.z }
 
-    handleHighlightCrosshairs = ([previous, next]) => {
+    handleHighlightCrosshairTarget = ([previous, next]) => {
         if (previous && (!next || previous.object !== next.object)) {
             previous.object.material.color.set (0xFF0000) }
         if (next && (!previous || previous.object !== next.object)) {
             next.object.material.color.set (0xFFBBBB) }}
 
+    handlePlaceBlock = target => {
+        console.log ("Placing block at", target)
+        const direction = Directions.getDirectionFromFaceIndex (target.faceIndex)
+        console.log (direction)
+        const { x, y, z } = direction.toUnitVector().add(target.object.position)
+        this.world.createBlock (x, y, z) }
+
+    handleDestroyBlock = target => {
+        this.world.destroyBlock (target.object) }
+
+
     // Helper functions
 
-    getMovementVector = keyCode => rotation =>
-        handlers[keyCode] (rotation.clone     ()
-                                   .multiply  (SQUARE)
-                                   .normalize ())
+    getMovementVector = keyCode => gaze =>
+        handlers[keyCode] (gaze.clone     ()
+                               .multiply  (SQUARE)
+                               .normalize ())
 
     getNewPosition = (position, movement) =>
         position.addScaledVector (movement, 0.1)

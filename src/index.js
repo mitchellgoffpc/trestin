@@ -7,11 +7,11 @@ import { initializeEventStreams } from 'util/streams'
 
 // Application entry point
 window.onload = () => {
-    let renderer = new Three.WebGLRenderer ({ antialias: true })
-
     let streams = initializeEventStreams ()
+
     let world = new World ()
     let player = new Player (streams, world)
+    let renderer = new Three.WebGLRenderer ({ antialias: true })
 
     // A little housekeeping
     renderer.setSize (window.innerWidth, window.innerHeight)
@@ -25,6 +25,6 @@ window.onload = () => {
     draw ()
 
     // A few event handlers
-    streams.mouseDown.onValue (() => document.body.requestPointerLock())
+    streams.mouseDown.onValue (() => document.body.requestPointerLock ())
     streams.resize.onValue (() =>
-        renderer.setSize(window.innerWidth, window.innerHeight)) }
+        renderer.setSize (window.innerWidth, window.innerHeight)) }
