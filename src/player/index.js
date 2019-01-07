@@ -13,7 +13,7 @@ const SQUARE = new Three.Vector3 (1, 0, 1)
 const truthy = Boolean
 const yLimit = Math.PI / 2 - 0.0001
 const initialRotation = new Three.Vector2 (0, 0)
-const initialPosition = new Three.Vector3 (0, 0, 5)
+const initialPosition = new Three.Vector3 (0, 2, 5)
 
 const handlers = {
     16: () => DOWN,
@@ -77,8 +77,8 @@ export default class Player {
 
     createCrosshairTargetStream = streams =>
         Bacon.combineAsArray (streams.movement, streams.rotation)
-             .skip (1)
-             .map  (([position, gaze]) => this.world.getClosestIntersection (position, gaze))
+             .skip   (1)
+             .map    (([position, gaze]) => this.world.getClosestIntersection (position, gaze))
 
     createPlaceBlockStream = streams =>
         streams.leftClickDown.filter (streams.controlsEnabled)
@@ -104,15 +104,14 @@ export default class Player {
         this.camera.position.z = position.z }
 
     handleHighlightCrosshairTarget = ([previous, next]) => {
-        if (previous && (!next || previous.object !== next.object)) {
-            previous.object.material.color.set (0xFF0000) }
         if (next && (!previous || previous.object !== next.object)) {
-            next.object.material.color.set (0xFFBBBB) }}
+            next.object.material.originalColor = next.object.material.color.clone()
+            next.object.material.color.add (new Three.Color (0.2, 0.2, 0.2)) }
+        if (previous && (!next || previous.object !== next.object)) {
+            previous.object.material.color.copy (previous.object.material.originalColor) }}
 
     handlePlaceBlock = target => {
-        console.log ("Placing block at", target)
         const direction = Directions.getDirectionFromFaceIndex (target.faceIndex)
-        console.log (direction)
         const { x, y, z } = direction.toUnitVector().add(target.object.position)
         this.world.createBlock (x, y, z) }
 

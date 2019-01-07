@@ -10,6 +10,7 @@ class Direction {
     toUnitVector = () =>
         this.vector.clone() }
 
+
 // Direction enum class
 export default class Directions {
     static UP    = new Direction ("UP", 0, 1, 0)
