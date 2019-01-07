@@ -11,7 +11,7 @@ class Direction {
         this.vector.clone() }
 
 
-// Direction enum class
+// Directions enum
 export default class Directions {
     static UP    = new Direction ("UP", 0, 1, 0)
     static DOWN  = new Direction ("DOWN", 0, -1, 0)

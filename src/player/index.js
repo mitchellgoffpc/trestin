@@ -3,7 +3,7 @@ import Bacon from 'baconjs'
 import * as Three from 'three'
 
 import M from 'util/math'
-import Directions from 'world/directions'
+import Directions from 'util/directions'
 
 // Constants
 const UP = new Three.Vector3 (0, 1, 0)
@@ -31,7 +31,9 @@ export default class Player {
     constructor (streams, world) {
         this.handleResizeCamera ()
         this.createEventStreams (streams)
+
         this.world = world
+        // this.world.createEntity (playerEntity)
 
         this.streams.resize.onValue (this.handleResizeCamera)
         this.streams.movement.onValue (this.handleMoveCamera)
@@ -113,7 +115,7 @@ export default class Player {
     handlePlaceBlock = target => {
         const direction = Directions.getDirectionFromFaceIndex (target.faceIndex)
         const { x, y, z } = direction.toUnitVector().add(target.object.position)
-        this.world.createBlock (x, y, z) }
+        this.world.placeBlock (x, y, z) }
 
     handleDestroyBlock = target => {
         this.world.destroyBlock (target.object) }

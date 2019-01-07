@@ -3,6 +3,7 @@ import * as Three from 'three'
 
 import Chunk from 'world/chunk'
 import Entity from 'world/entity'
+import Shapes from 'util/shapes'
 import PhysicsEngine from 'physics'
 
 
@@ -24,8 +25,12 @@ export default class World {
         this.scene.add (new Three.AmbientLight (0x404040))
         _.forEach (this.chunks, chunk => chunk.populate (this.scene, this.physics))
 
-        // Create a sphere for testing the physics engine
-        this.createEntity (0, 10, 0, 1)
+        // Create some objects for testing the physics engine
+        const sphere = new Entity ({ shape: Shapes.SPHERE, color: 0xFFAA88, mass: 0.1, radius: 1 })
+        const box = new Entity ({ shape: Shapes.BOX, color: 0xFFAA88, mass: 1, x: 3, y: 3, z: 3 })
+
+        this.spawnEntity (sphere, 0, 10, 0)
+        this.spawnEntity (box, 8, 10, -8)
 
         // Add event handlers
         this.streams.timer.onValue (dt => this.physics.step (dt))
@@ -33,15 +38,23 @@ export default class World {
             _.forEach (entities, ({ x, y, z }, uuid) => {
                 this.entities[uuid].mesh.position.set (x, y, z) })) }
 
-    // Methods for creating and destroying objects
+    // Methods for creating blocks and entities
 
-    createBlock = (x, y, z) => {
+    placeBlock = (x, y, z) => {
         const chunk = this.getChunkForPosition (x, y, z)
         if (chunk) {
             const coord = i => i >= 0 ? i % 16 : i % 16 + 16
-            const { mesh, body } = chunk.createBlock (coord(x), coord(y), coord(z))
+            const { mesh, body } = chunk.placeBlock (coord(x), coord(y), coord(z))
             this.scene.add (mesh)
             this.physics.addBlock (body, x, y, z) }}
+
+    spawnEntity = (entity, x, y, z) => {
+        entity.mesh.position.set (x, y, z)
+        this.scene.add (entity.mesh)
+        this.physics.addEntity (entity.body, x, y, z)
+        this.entities[entity.uuid] = entity }
+
+    // Methods for destroying blocks and entities
 
     destroyBlock = block => {
         const { x, y, z } = block.position
@@ -51,12 +64,10 @@ export default class World {
             this.scene.remove (mesh)
             this.physics.removeBlock (body) }}
 
-    createEntity = (x, y, z, mass) => {
-        const entity = new Entity (mass)
-        entity.mesh.position.set (x, y, z)
-        this.scene.add (entity.mesh)
-        this.physics.addEntity (entity.body, x, y, z)
-        this.entities[entity.uuid] = entity }
+    destroyEntity = entity => {
+        this.scene.remove (entity.mesh)
+        this.physics.removeEntity (entity.body)
+        delete this.entities[entity.uuid] }
 
     // Helper methods
 

@@ -3,17 +3,13 @@ import PhysicsWorker from 'physics/worker'
 
 // Inner classes for dealing with blocks and entities
 class Block {
-    isBlock = true
-
     constructor (uuid) {
         this.uuid = uuid }}
 
 class Entity {
-    isEntity = true
-
-    constructor (uuid, mass) {
+    constructor (uuid, properties) {
         this.uuid = uuid
-        this.mass = mass }}
+        _.forEach (properties, (value, key) => { this[key] = value }) }}
 
 
 // PhysicsEngine class
