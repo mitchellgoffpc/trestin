@@ -18,10 +18,12 @@ module.exports = {
         modules: ['./src', './node_modules'] },
 
     module: {
-        rules: [{
-            test: /\.js$/,
-            exclude: /node_modules/,
-            use: { loader: 'babel-loader' }}]},
+        rules: [
+            { test: /worker\.js$/,
+              use: { loader: 'worker-loader' }},
+            { test: /\.js$/,
+              exclude: /node_modules/,
+              use: { loader: 'babel-loader' }}]},
 
     plugins: [
         new CopyWebpackPlugin([{ from: './src/static' }])],

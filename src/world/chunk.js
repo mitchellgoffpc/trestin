@@ -1,9 +1,12 @@
 import * as Three from 'three'
 
+import Block from 'world/block'
+import Physics from 'physics'
+
 
 export default class Chunk {
-    blocks = []
-    lights = []
+    blocks = {}
+    lights = {}
 
     constructor (x, y, z, color) {
         this.position = [x, y, z]
@@ -34,30 +37,33 @@ export default class Chunk {
         // Add a light in the center
         this.createLight (8, 15, 8, 0.7) }
 
-    // Populate the scene
-    populate = scene => {
-        this.blocks.forEach (block => scene.add (block))
-        this.lights.forEach (light => scene.add (light)) }
+    // Populate the scene and physics engine
+    populate = (scene, physics) => {
+        _.forEach (this.blocks, block => scene.add (block.mesh))
+        _.forEach (this.lights, light => scene.add (light))
+        _.forEach (this.blocks, block => {
+            const { x, y, z } = block.mesh.position
+            physics.addBlock (block.body, x, y, z) }) }
 
 
     // Methods for creating and destroying objects
 
     createBlock = (x, y, z, color = this.color) => {
         const [cx, cy, cz] = this.position
-        const geometry = new Three.BoxGeometry (1, 1, 1)
-        const material = new Three.MeshLambertMaterial ({ color })
-        const block = new Three.Mesh (geometry, material)
-        block.position.set (cx * 16 + x, cy * 16 + y, cz * 16 + z)
-        this.blocks.push (block)
+        const block = new Block (color)
+        block.mesh.position.set (cx * 16 + x, cy * 16 + y, cz * 16 + z)
+        this.blocks[block.uuid] = block
         return block }
 
     createLight = (x, y, z, intensity = 1.0) => {
         const [cx, cy, cz] = this.position
         const light = new Three.PointLight (0xFFFFFF, intensity)
         light.position.set (cx * 16 + x, cy * 16 + y, cz * 16 + z)
-        this.lights.push (light)
+        this.lights[light.uuid] = light
         return light }
 
-    destroyBlock = block => {
-        this.blocks = this.blocks.filter (x => x !== block) }
+    destroyBlock = uuid => {
+        const block = this.blocks[uuid]
+        delete this.blocks[uuid]
+        return block }
 }

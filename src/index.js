@@ -9,7 +9,7 @@ import { initializeEventStreams } from 'util/streams'
 window.onload = () => {
     let streams = initializeEventStreams ()
 
-    let world = new World ()
+    let world = new World (streams)
     let player = new Player (streams, world)
     let renderer = new Three.WebGLRenderer ({ antialias: true })
 
