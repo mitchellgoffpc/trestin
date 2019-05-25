@@ -61,5 +61,13 @@ const getShape = entity => do {
         new Cannon.Box (new Cannon.Vec3 (entity.x / 2, entity.y / 2, entity.z / 2))
     else if (entity.shape === Shapes.SPHERE)
         new Cannon.Sphere (entity.radius)
-    else if (entity.shape === Shapes.CYLINDER)
-        new Cannon.Cylinder (entity.radius, entity.radius, entity.height, 16) }
+    else if (entity.shape === Shapes.CYLINDER) {
+        getRotatedCylinder (entity) }}
+
+const getRotatedCylinder = entity => {
+    const cylinder = new Cannon.Cylinder (entity.radius, entity.radius, entity.height, 16)
+    const translation = new Cannon.Vec3 (0, 0, 0)
+    const rotation = new Cannon.Quaternion ()
+    rotation.setFromAxisAngle (new Cannon.Vec3 (1, 0, 0), -Math.PI / 2)
+    cylinder.transformAllPoints (translation, rotation)
+    return cylinder }

@@ -2,9 +2,11 @@ import _ from 'lodash'
 import * as Three from 'three'
 
 import Chunk from 'world/chunk'
-import Entity from 'world/entity'
 import Shapes from 'util/shapes'
 import PhysicsEngine from 'physics'
+
+import Entity from 'entities'
+import SteamEngine from 'entities/steam-engine'
 
 
 export default class World {
@@ -25,12 +27,16 @@ export default class World {
         this.scene.add (new Three.AmbientLight (0x404040))
         _.forEach (this.chunks, chunk => chunk.populate (this.scene, this.physics))
 
-        // Create some objects for testing the physics engine
-        const sphere = new Entity ({ shape: Shapes.SPHERE, color: 0xFFAA88, mass: 0.1, radius: 1 })
-        const box = new Entity ({ shape: Shapes.BOX, color: 0xFFAA88, mass: 1, x: 3, y: 3, z: 3 })
+        // Create a sphere for testing the physics engine
+        const sphere   = new Entity ({ shape: Shapes.SPHERE, color: 0xFFAA88, mass: 0.1, radius: 1 })
+        const box      = new Entity ({ shape: Shapes.BOX, color: 0xFFAA88, mass: 1, x: 3, y: 3, z: 3 })
+        const cylinder = new Entity ({ shape: Shapes.CYLINDER, color: 0xFFAA88, mass: 1, radius: 2, height: 2 })
+        const steamEngine = new SteamEngine ()
 
-        this.spawnEntity (sphere, 0, 10, 0)
-        this.spawnEntity (box, 8, 10, -8)
+        sphere.spawn      (this, 0, 10, 0)
+        box.spawn         (this, 8, 10, -8)
+        cylinder.spawn    (this, -8, 10, -8)
+        steamEngine.spawn (this, 5, 1, 0)
 
         // Add event handlers
         this.streams.timer.onValue (dt => this.physics.step (dt))
@@ -47,12 +53,6 @@ export default class World {
             const { mesh, body } = chunk.placeBlock (coord(x), coord(y), coord(z))
             this.scene.add (mesh)
             this.physics.addBlock (body, x, y, z) }}
-
-    spawnEntity = (entity, x, y, z) => {
-        entity.mesh.position.set (x, y, z)
-        this.scene.add (entity.mesh)
-        this.physics.addEntity (entity.body, x, y, z)
-        this.entities[entity.uuid] = entity }
 
     // Methods for destroying blocks and entities
 
