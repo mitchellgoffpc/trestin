@@ -36,7 +36,7 @@ export default class World {
         sphere.spawn      (this, 0, 10, 0)
         box.spawn         (this, 8, 10, -8)
         cylinder.spawn    (this, -8, 10, -8)
-        steamEngine.spawn (this, 5, 1, 0)
+        steamEngine.spawn (this, 5, 0, 0)
 
         // Add event handlers
         this.streams.timer.onValue (dt => this.physics.step (dt))
