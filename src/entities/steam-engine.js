@@ -9,7 +9,7 @@ export default class SteamEngine extends Entity {
     backstroke = false
     pistonVelocity = 0
 
-    getMesh () {
+    createMesh () {
         const group = new Three.Group ()
 
         // Create the cylinder mesh
@@ -105,13 +105,12 @@ export default class SteamEngine extends Entity {
 
     updatePistonPosition = () => {
         const position = this.piston.position
-        this.pistonVelocity += 0.001
-
         position.setY (position.y + (this.backstroke ? -this.pistonVelocity : this.pistonVelocity))
 
         if (this.backstroke && position.y < 1.6 || !this.backstroke && position.y > 3.1) {
             position.setY (M.clamp (position.y, 1.60001, 3.09999))
-            this.changePistonDirection () }
+            this.backstroke = !this.backstroke
+            this.pistonVelocity = 0 }
 
         const crankshaftRotation = this.getIntersectionAngle (2.2, .75, 4.55 - position.y)
         const flywheelRotation = this.getIntersectionAngle (.75, 2.2, 4.55 - position.y)
@@ -119,11 +118,8 @@ export default class SteamEngine extends Entity {
         this.crankshaft.position.setY (6.05 - position.y)
         this.crankshaft.rotation.z = crankshaftRotation * (this.backstroke ? -1 : 1)
         this.flywheel.rotation.z = flywheelRotation * (this.backstroke ? 1 : -1)
-    }
 
-    changePistonDirection = () => {
-        this.backstroke = !this.backstroke
-        this.pistonVelocity = 0 }
+        this.pistonVelocity += 0.001 }
 
     getIntersectionAngle = (r1, r2, d) => {
         if (d > r1 + r2)

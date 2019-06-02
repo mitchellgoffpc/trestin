@@ -5,21 +5,22 @@ import Shapes from 'util/shapes'
 
 
 export default class Entity {
-    hasPhysicsBody = true
+    needsPhysicsBody = true
+    needsGameTick = false
 
     constructor (properties = {}) {
-        this.mesh = this.getMesh (properties)
+        this.mesh = this.createMesh (properties)
         this.uuid = this.mesh.uuid
-        if (this.hasPhysicsBody) {
+        if (this.needsPhysicsBody) {
             this.body = new Physics.Entity (this.uuid, properties) }}
 
-    getMesh (properties) {
-        return new Three.Mesh (this.getGeometry (properties), this.getMaterial (properties)) }
+    createMesh (properties) {
+        return new Three.Mesh (this.createGeometry (properties), this.createMaterial (properties)) }
 
-    getMaterial ({ color }) {
+    createMaterial ({ color }) {
         return new Three.MeshLambertMaterial ({ color }) }
 
-    getGeometry (properties) {
+    createGeometry (properties) {
         if (properties.shape === Shapes.BOX)
             return new Three.BoxGeometry (properties.x, properties.y, properties.z)
         else if (properties.shape === Shapes.SPHERE)
@@ -27,12 +28,14 @@ export default class Entity {
         else if (properties.shape === Shapes.CYLINDER)
             return new Three.CylinderGeometry (properties.radius, properties.radius, properties.height, 16) }
 
-
+    tick () {}
     spawn (world, x, y, z) {
         world.scene.add (this.mesh)
         world.entities[this.uuid] = this
         this.mesh.position.set (x, y, z)
 
-        if (this.hasPhysicsBody) {
-            world.physics.addEntity (this.body, x, y, z) }}
+        if (this.needsPhysicsBody) {
+            world.physics.addEntity (this.body, x, y, z) }
+        if (this.needsGameTick) {
+            world.streams.timer.onValue (() => this.tick()) }}
 }

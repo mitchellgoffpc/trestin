@@ -1,12 +1,14 @@
 import _ from 'lodash'
 import * as Three from 'three'
 
+import Entity from 'entities'
+import Piston from 'entities/machines/piston'
+import Counterweight from 'entities/machines/counterweight'
+
+import PhysicsEngine from 'physics'
+import Machine from 'physics/machinery'
 import Chunk from 'world/chunk'
 import Shapes from 'util/shapes'
-import PhysicsEngine from 'physics'
-
-import Entity from 'entities'
-import SteamEngine from 'entities/steam-engine'
 
 
 export default class World {
@@ -27,19 +29,26 @@ export default class World {
         this.scene.add (new Three.AmbientLight (0x404040))
         _.forEach (this.chunks, chunk => chunk.populate (this.scene, this.physics))
 
-        // Create a sphere for testing the physics engine
+        // Create some shapes for testing the physics engine
         const sphere   = new Entity ({ shape: Shapes.SPHERE, color: 0xFFAA88, mass: 0.1, radius: 1 })
         const box      = new Entity ({ shape: Shapes.BOX, color: 0xFFAA88, mass: 1, x: 3, y: 3, z: 3 })
         const cylinder = new Entity ({ shape: Shapes.CYLINDER, color: 0xFFAA88, mass: 1, radius: 2, height: 2 })
-        const steamEngine = new SteamEngine ()
 
-        sphere.spawn      (this, 0, 10, 0)
-        box.spawn         (this, 8, 10, -8)
-        cylinder.spawn    (this, -8, 10, -8)
-        steamEngine.spawn (this, 5, 0, 0)
+        sphere.spawn   (this, 0, 10, 0)
+        box.spawn      (this, 8, 10, -8)
+        cylinder.spawn (this, -8, 10, -8)
+
+        const piston = new Piston ()
+        const counterweight = new Counterweight ()
+        const machine = new Machine (piston, counterweight)
+
+        piston.spawn        (this, 5, 2, 0)
+        counterweight.spawn (this, 8, 2, 0)
+        machine.connect     (piston.connections.head, counterweight.connections.beam)
 
         // Add event handlers
         this.streams.timer.onValue (dt => this.physics.step (dt))
+        this.streams.timer.onValue (dt => machine.step (dt))
         this.physics.onStep (({ entities }) =>
             _.forEach (entities, ({ x, y, z }, uuid) => {
                 this.entities[uuid].mesh.position.set (x, y, z) })) }

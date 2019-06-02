@@ -13,7 +13,7 @@ const SQUARE = new Three.Vector3 (1, 0, 1)
 const truthy = Boolean
 const yLimit = Math.PI / 2 - 0.0001
 const initialRotation = new Three.Vector2 (0, 0)
-const initialPosition = new Three.Vector3 (0, 2, 5)
+const initialPosition = new Three.Vector3 (8, 5, 12)
 
 const handlers = {
     16: () => DOWN,
@@ -72,7 +72,7 @@ export default class Player {
                        .sampledBy (streams.timer)
                        .filter    (truthy)
                        .map       (streams.rotation)
-                       .map       (this.getMovementVector(keyCode)) })
+                       .map       (this.getMovementVector (keyCode)) })
 
         return Bacon.mergeAll (movementStreams)
                     .scan     (initialPosition, this.getNewPosition) }
