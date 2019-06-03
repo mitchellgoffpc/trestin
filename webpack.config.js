@@ -2,6 +2,7 @@ const path = require('path')
 const webpack = require('webpack')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
+
 module.exports = {
     mode: process.env.NODE_ENV || 'production',
     devtool: 'source-map',

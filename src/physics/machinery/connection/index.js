@@ -1,12 +1,14 @@
 export default class Connection {
-    position = 0
     left = null
     right = null
+    position = 0
 
     constructor (machine) {
         this.left = { machine }}
 
     clear () {
+        this.didCalculateAcceleration = false
+
         if (this.left) {
             this.left.effectiveMass = 0 }
         if (this.right) {
@@ -19,6 +21,8 @@ export default class Connection {
             this.right.effectiveMass = this.right.machine.getEffectiveMass (this.right) }}
 
     getAcceleration (connection) {
+        this.didCalculateAcceleration = true
+
         let deltaV = 0
         if (this.left && this.left.machine !== connection) {
             deltaV += this.left.machine.getAcceleration (this) }

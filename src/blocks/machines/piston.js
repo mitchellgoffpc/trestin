@@ -1,7 +1,7 @@
 import * as Three from 'three'
 
-import Entity from 'entities'
-import Pivot from 'entities/geometry/pivot'
+import Machine from 'blocks/machines'
+import Pivot from 'blocks/geometry/pivot'
 import BaseConnection from 'physics/machinery/connection/base'
 import BeamConnection from 'physics/machinery/connection/beam'
 
@@ -9,13 +9,15 @@ import M from 'util/math'
 import GeometryBuilder from 'util/geometry'
 
 
-export default class Piston extends Entity {
-    needsPhysicsBody = false
-    needsGameTick = false
+export default class Piston extends Machine {
     backstroke = false
     connections = {
         base: new BaseConnection (this),
         head: new BeamConnection (this) }
+
+    constructor (force) {
+        super ()
+        this.force = force }
 
     createMesh () {
         const builder = new GeometryBuilder ()
@@ -40,6 +42,13 @@ export default class Piston extends Entity {
             deltaV += this.connections.head.getAcceleration (this) }
         return deltaV }
 
+    getPistonForce = () => do {
+        if (!this.backstroke && this.connections.base.position < 1)
+             this.force
+        else if (this.backstroke && this.connections.base.position > 0.5)
+             -this.force
+        else 0 }
+
     updatePosition (connection, position) {
         let basePosition
         if (connection === this.connections.base) {
@@ -55,12 +64,4 @@ export default class Piston extends Entity {
         if (basePosition > 1.5 || basePosition < 0) {
             throw new Error ("Bounced") }
 
-        this.piston.position.setY (M.clamp (basePosition, 0, 1.5) + 1.6) }
-
-    getPistonForce = () => do {
-        if (!this.backstroke && this.connections.base.position < 1)
-             0.0002
-        else if (this.backstroke && this.connections.base.position > 0.5)
-             -0.0002
-        else 0 }
-}
+        this.piston.position.setY (M.clamp (basePosition, 0, 1.5) + 1.6) }}

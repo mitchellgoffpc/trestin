@@ -2,19 +2,19 @@ import _ from 'lodash'
 import * as Three from 'three'
 
 import Entity from 'entities'
-import Piston from 'entities/machines/piston'
-import Counterweight from 'entities/machines/counterweight'
-
-import PhysicsEngine from 'physics'
-import Machine from 'physics/machinery'
 import Chunk from 'world/chunk'
 import Shapes from 'util/shapes'
+import PhysicsEngine from 'physics'
+import MachineryEngine from 'physics/machinery'
+import Piston from 'blocks/machines/piston'
+import Counterweight from 'blocks/machines/counterweight'
 
 
 export default class World {
     scene = new Three.Scene ()
     raycaster = new Three.Raycaster ()
     physics = new PhysicsEngine ()
+    machinery = new MachineryEngine ()
 
     entities = {}
     chunks = {
@@ -38,30 +38,41 @@ export default class World {
         box.spawn      (this, 8, 10, -8)
         cylinder.spawn (this, -8, 10, -8)
 
-        const piston = new Piston ()
-        const counterweight = new Counterweight ()
-        const machine = new Machine (piston, counterweight)
+        // Create some machines for testing the machinery engine
+        const pistonA = new Piston (0.0002)
+        const pistonB = new Piston (0.00005)
+        const counterweightA = new Counterweight ()
+        const counterweightB = new Counterweight ()
 
-        piston.spawn        (this, 5, 2, 0)
-        counterweight.spawn (this, 8, 2, 0)
-        machine.connect     (piston.connections.head, counterweight.connections.beam)
+        this.placeBlock (5, 1, 0)
+        this.placeBlock (5, 1, -3)
+        this.placeMachine (5, 1, 0, pistonA)
+        this.placeMachine (5, 1, -3, pistonB)
+        this.placeMachine (8, 1, 0, counterweightA)
+        this.placeMachine (8, 1, -3, counterweightB)
+        this.machinery.connect (pistonA.connections.head, counterweightA.connections.beam)
+        this.machinery.connect (pistonB.connections.head, counterweightB.connections.beam)
 
         // Add event handlers
         this.streams.timer.onValue (dt => this.physics.step (dt))
-        this.streams.timer.onValue (dt => machine.step (dt))
+        this.streams.timer.onValue (dt => this.machinery.step (dt))
         this.physics.onStep (({ entities }) =>
             _.forEach (entities, ({ x, y, z }, uuid) => {
                 this.entities[uuid].mesh.position.set (x, y, z) })) }
 
     // Methods for creating blocks and entities
 
-    placeBlock = (x, y, z) => {
+    placeBlock = (x, y, z, block) => {
         const chunk = this.getChunkForPosition (x, y, z)
         if (chunk) {
             const coord = i => i >= 0 ? i % 16 : i % 16 + 16
-            const { mesh, body } = chunk.placeBlock (coord(x), coord(y), coord(z))
+            const { mesh, body } = chunk.placeBlock (coord(x), coord(y), coord(z), { block })
             this.scene.add (mesh)
             this.physics.addBlock (body, x, y, z) }}
+
+    placeMachine = (x, y, z, machine) => {
+        this.placeBlock (x, y, z, machine)
+        this.machinery.addMachine (machine) }
 
     // Methods for destroying blocks and entities
 

@@ -1,6 +1,6 @@
 import * as Three from 'three'
 
-import Block from 'world/block'
+import Block from 'blocks'
 import Physics from 'physics'
 
 
@@ -15,7 +15,7 @@ export default class Chunk {
         // Create the floor
         for (let x = 0; x < 16; x++) {
             for (let z = 0; z < 16; z++) {
-                this.placeBlock (x, 0, z, 0x222222) }}
+                this.placeBlock (x, 0, z, { color: 0x222222 }) }}
 
         // Create the outlines
         this.placeBlock (0, 1, 0)
@@ -48,9 +48,9 @@ export default class Chunk {
 
     // Methods for creating and destroying objects
 
-    placeBlock = (x, y, z, color = this.color) => {
+    placeBlock = (x, y, z, { block, color = this.color } = {}) => {
         const [cx, cy, cz] = this.position
-        const block = new Block (color)
+        block = block || new Block (color)
         block.mesh.position.set (cx * 16 + x, cy * 16 + y, cz * 16 + z)
         this.blocks[block.uuid] = block
         return block }

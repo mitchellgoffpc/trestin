@@ -1,13 +1,11 @@
 import _ from 'lodash'
 
 
-export default class Machine {
+export default class MachineryEngine {
     nodes = []
-    rootNodeVelocity = 0
 
-    constructor (...machines) {
-        _.forEach (machines, machine =>
-            _.forEach (machine.connections, node => this.nodes.push (node))) }
+    addMachine (machine) {
+        _.forEach (machine.connections, node => this.nodes.push (node)) }
 
     connect (a, b) {
         const fieldA = this.getField (a)
@@ -32,12 +30,16 @@ export default class Machine {
     step () {
         _.forEach (this.nodes, node => node.clear ())
         _.forEach (this.nodes, node => node.calculateEffectiveMass ())
+        _.forEach (this.nodes, node => this.updateNodePosition (node)) }
 
-        const rootNode = _.first (this.nodes)
-        this.rootNodeVelocity += rootNode.getAcceleration ()
-        try {
-            rootNode.updatePosition (null, rootNode.position + this.rootNodeVelocity) }
-        catch (exception) {
-            this.rootNodeVelocity *= -0.5
-            if (Math.abs(this.rootNodeVelocity) > 0.001) {
-                rootNode.updatePosition (null, rootNode.position + this.rootNodeVelocity) }}}}
+    updateNodePosition (node) {
+        if (!node.didCalculateAcceleration) {
+            if (!node.rootNodeVelocity) { node.rootNodeVelocity = 0 }
+            node.rootNodeVelocity += node.getAcceleration ()
+
+            try {
+                node.updatePosition (null, node.position + node.rootNodeVelocity) }
+            catch (exception) {
+                node.rootNodeVelocity *= -0.4
+                if (Math.abs(node.rootNodeVelocity) > 0.001) {
+                    node.updatePosition (null, node.position + node.rootNodeVelocity) }}}}}

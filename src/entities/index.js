@@ -37,5 +37,4 @@ export default class Entity {
         if (this.needsPhysicsBody) {
             world.physics.addEntity (this.body, x, y, z) }
         if (this.needsGameTick) {
-            world.streams.timer.onValue (() => this.tick()) }}
-}
+            world.streams.timer.onValue (() => this.tick()) }}}
