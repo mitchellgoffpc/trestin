@@ -4,8 +4,6 @@ import Machine from 'blocks/machines'
 import Pivot from 'blocks/geometry/pivot'
 import BaseConnection from 'physics/machinery/connection/base'
 import BeamConnection from 'physics/machinery/connection/beam'
-
-import M from 'util/math'
 import GeometryBuilder from 'util/geometry'
 
 
@@ -40,12 +38,20 @@ export default class Counterweight extends Machine {
             deltaV += this.connections.beam.getAcceleration (this) }
         return deltaV }
 
+    checkPosition = (connection, position) => do {
+        if (connection === this.connections.base)
+            Math.abs (position) <= Math.PI / 4 &&
+            this.connections.beam.checkPosition (this, -Math.tan (position) * 3 - .75)
+        else if (connection === this.connections.beam)
+            Math.abs (Math.atan ((position - .75) / 3)) <= Math.PI / 4 &&
+            this.connections.base.checkPosition (this, -Math.atan ((position - .75) / 3)) }
+
     updatePosition (connection, position) {
         if (connection === this.connections.base) {
             this.connections.beam.updatePosition (this, -Math.tan (position) * 3 - .75) }
         else if (connection === this.connections.beam) {
             this.connections.base.updatePosition (this, -Math.atan ((position - .75) / 3)) }
 
-        this.beam.rotation.z = M.clamp (this.connections.base.position, -Math.PI / 4, Math.PI / 4)
-        this.weight.position.set (Math.cos (this.beam.rotation.z) * 3,
-                                  Math.sin (this.beam.rotation.z) * 3 + 3.7, 0) }}
+        this.beam.rotation.z = this.connections.base.position
+        this.weight.position.set (Math.cos (this.connections.base.position) * 3,
+                                  Math.sin (this.connections.base.position) * 3 + 3.7, 0) }}

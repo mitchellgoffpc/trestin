@@ -17,7 +17,7 @@ export default class Connection {
     calculateEffectiveMass () {
         if (this.left) {
             this.left.effectiveMass = this.left.machine.getEffectiveMass (this.left) }
-        if (this.right) {
+        else {
             this.right.effectiveMass = this.right.machine.getEffectiveMass (this.right) }}
 
     getAcceleration (connection) {
@@ -26,14 +26,23 @@ export default class Connection {
         let deltaV = 0
         if (this.left && this.left.machine !== connection) {
             deltaV += this.left.machine.getAcceleration (this) }
-        if (this.right && this.right.machine !== connection) {
+        else if (this.right && this.right.machine !== connection) {
             deltaV += this.right.machine.getAcceleration (this) }
         return deltaV }
 
-    updatePosition (sender, position) {
-        if (this.left && this.left.machine !== sender) {
-            this.left.machine.updatePosition (this, position) }
-        if (this.right && this.right.machine !== sender) {
-            this.right.machine.updatePosition (this, position) }
+    checkPosition (connection, position) {
+        let flag = true
+        if (this.left && this.left.machine !== connection) {
+            flag = flag && this.left.machine.checkPosition (this, position) }
+        if (this.right && this.right.machine !== connection) {
+            flag = flag && this.right.machine.checkPosition (this, position) }
 
-        this.position = position }}
+        return flag }
+
+    updatePosition (connection, position) {
+        this.position = position
+        if (!connection || this.left && this.right) {
+            if (this.left.machine !== connection) {
+                this.left.machine.updatePosition (this, position) }
+            else if (this.right.machine !== connection) {
+                this.right.machine.updatePosition (this, position) }}}}

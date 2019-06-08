@@ -7,6 +7,7 @@ import Shapes from 'util/shapes'
 import PhysicsEngine from 'physics'
 import MachineryEngine from 'physics/machinery'
 import Piston from 'blocks/machines/piston'
+import WalkingBeam from 'blocks/machines/walking-beam'
 import Counterweight from 'blocks/machines/counterweight'
 
 
@@ -41,17 +42,17 @@ export default class World {
         // Create some machines for testing the machinery engine
         const pistonA = new Piston (0.0002)
         const pistonB = new Piston (0.00005)
-        const counterweightA = new Counterweight ()
-        const counterweightB = new Counterweight ()
+        const counterweight = new Counterweight ()
+        const walkingBeam = new WalkingBeam ()
 
         this.placeBlock (5, 1, 0)
         this.placeBlock (5, 1, -3)
         this.placeMachine (5, 1, 0, pistonA)
         this.placeMachine (5, 1, -3, pistonB)
-        this.placeMachine (8, 1, 0, counterweightA)
-        this.placeMachine (8, 1, -3, counterweightB)
-        this.machinery.connect (pistonA.connections.head, counterweightA.connections.beam)
-        this.machinery.connect (pistonB.connections.head, counterweightB.connections.beam)
+        this.placeMachine (8, 1, 0, counterweight)
+        this.placeMachine (8, 1, -3, walkingBeam)
+        this.machinery.connect (pistonA.connections.head, counterweight.connections.beam)
+        this.machinery.connect (pistonB.connections.head, walkingBeam.connections.left)
 
         // Add event handlers
         this.streams.timer.onValue (dt => this.physics.step (dt))

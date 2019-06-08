@@ -12,10 +12,12 @@ export default class MachineryEngine {
         const fieldB = this.getField (b)
         const machineA = a[fieldA].machine
         const machineB = b[fieldB].machine
+        const connectionKey = _.findKey (machineB.connections, x => x === b)
 
         a[fieldA === 'left' ? 'right' : 'left'] = { machine: machineB }
-        machineB.connections.beam = a
-        machineB.updatePosition (a, a.position) }
+        machineB.connections[connectionKey] = a
+        machineB.updatePosition (a, a.position)
+        _.pull(this.nodes, b) }
 
     getField (x) {
         if (x.left && x.right) {
@@ -37,9 +39,8 @@ export default class MachineryEngine {
             if (!node.rootNodeVelocity) { node.rootNodeVelocity = 0 }
             node.rootNodeVelocity += node.getAcceleration ()
 
-            try {
+            if (node.checkPosition (null, node.position + node.rootNodeVelocity)) {
                 node.updatePosition (null, node.position + node.rootNodeVelocity) }
-            catch (exception) {
+            else if (Math.abs(node.rootNodeVelocity) > 0.001) {
                 node.rootNodeVelocity *= -0.4
-                if (Math.abs(node.rootNodeVelocity) > 0.001) {
-                    node.updatePosition (null, node.position + node.rootNodeVelocity) }}}}}
+                node.updatePosition (null, node.position + node.rootNodeVelocity) }}}}

@@ -4,8 +4,6 @@ import Machine from 'blocks/machines'
 import Pivot from 'blocks/geometry/pivot'
 import BaseConnection from 'physics/machinery/connection/base'
 import BeamConnection from 'physics/machinery/connection/beam'
-
-import M from 'util/math'
 import GeometryBuilder from 'util/geometry'
 
 
@@ -24,8 +22,8 @@ export default class Piston extends Machine {
         const piston = builder.addSubgroup ({ y: 1.6 })
         this.piston = piston.getMesh ()
 
-        builder.addCylinder ({ y: 1.5, r: .5, h: 2, color: 0xDDAA33 })
-        builder.addCylinder ({ y: 2.5, r: .2, h: .1, color: 0xDDAA33 })
+        builder.addCylinder ({ r: .5, h: 2, y: 1.5, color: 0xDDAA33 })
+        builder.addCylinder ({ r: .2, h: .1, y: 2.5, color: 0xDDAA33 })
         piston.addCylinder ({ r: .1, h: 2, color: 0xAAAAAA })
         piston.addMesh ({ y: 1, mesh: Pivot.createMesh (0xAAAAAA, 0xFF2211) })
 
@@ -49,19 +47,21 @@ export default class Piston extends Machine {
              -this.force
         else 0 }
 
+    checkPosition = (connection, position) => do {
+        if (connection === this.connections.base)
+            position <= 1.5 && position >= 0 && this.connections.head.checkPosition (this, position)
+        else if (connection === this.connections.head)
+            position <= 1.5 && position >= 0 && this.connections.base.checkPosition (this, position) }
+
     updatePosition (connection, position) {
-        let basePosition
         if (connection === this.connections.base) {
-            this.connections.head.updatePosition (this, position)
-            basePosition = position }
+            this.connections.head.updatePosition (this, position) }
         else if (connection === this.connections.head) {
-            this.connections.base.updatePosition (this, position)
-            basePosition = this.connections.base.position }
+            this.connections.base.updatePosition (this, position) }
 
-        if (!this.backstroke && basePosition > 1.5 ||
-             this.backstroke && basePosition < 0) {
+        const basePosition = this.connections.base.position
+        if (!this.backstroke && basePosition > 1.4 ||
+             this.backstroke && basePosition < 0.1) {
             this.backstroke = !this.backstroke }
-        if (basePosition > 1.5 || basePosition < 0) {
-            throw new Error ("Bounced") }
 
-        this.piston.position.setY (M.clamp (basePosition, 0, 1.5) + 1.6) }}
+        this.piston.position.setY (basePosition + 1.6) }}
