@@ -2,15 +2,15 @@ import * as Three from 'three'
 
 import Machine from 'blocks/machines'
 import Pivot from 'blocks/geometry/pivot'
-import BaseConnection from 'physics/machinery/connection/base'
-import BeamConnection from 'physics/machinery/connection/beam'
+import LinearConnection from 'physics/machinery/connections/linear'
 import GeometryBuilder from 'util/geometry'
 
 
 export default class Counterweight extends Machine {
     connections = {
-        base: new BaseConnection (this),
-        beam: new BeamConnection (this) }
+        beam: new LinearConnection (this, {
+            input: x => -Math.atan ((x - .75) / 3),
+            output: x => -Math.tan (x) * 3 - .75 }) }
 
     createMesh () {
         const builder = new GeometryBuilder ()
@@ -27,31 +27,12 @@ export default class Counterweight extends Machine {
 
         return builder.getMesh () }
 
-    getEffectiveMass (connection) {
-        return 1 }
+    getBaseForce = () => 0.0001
 
-    getAcceleration (connection) {
-        let deltaV = 0.0001
-        if (connection !== this.connections.base) {
-            deltaV += this.connections.base.getAcceleration (this) }
-        if (connection !== this.connections.beam) {
-            deltaV += this.connections.beam.getAcceleration (this) }
-        return deltaV }
+    checkBasePosition = position =>
+        Math.abs (position) <= Math.PI / 4
 
-    checkPosition = (connection, position) => do {
-        if (connection === this.connections.base)
-            Math.abs (position) <= Math.PI / 4 &&
-            this.connections.beam.checkPosition (this, -Math.tan (position) * 3 - .75)
-        else if (connection === this.connections.beam)
-            Math.abs (Math.atan ((position - .75) / 3)) <= Math.PI / 4 &&
-            this.connections.base.checkPosition (this, -Math.atan ((position - .75) / 3)) }
-
-    updatePosition (connection, position) {
-        if (connection === this.connections.base) {
-            this.connections.beam.updatePosition (this, -Math.tan (position) * 3 - .75) }
-        else if (connection === this.connections.beam) {
-            this.connections.base.updatePosition (this, -Math.atan ((position - .75) / 3)) }
-
-        this.beam.rotation.z = this.connections.base.position
-        this.weight.position.set (Math.cos (this.connections.base.position) * 3,
-                                  Math.sin (this.connections.base.position) * 3 + 3.7, 0) }}
+    updateBasePosition = (position, velocity) => {
+        super.updateBasePosition (position, velocity)
+        this.beam.rotation.z = position
+        this.weight.position.set (Math.cos (position) * 3, Math.sin (position) * 3 + 3.7, 0) }}

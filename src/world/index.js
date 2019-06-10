@@ -3,12 +3,15 @@ import * as Three from 'three'
 
 import Entity from 'entities'
 import Chunk from 'world/chunk'
-import Shapes from 'util/shapes'
-import PhysicsEngine from 'physics'
-import MachineryEngine from 'physics/machinery'
+import PhysicsEngine from 'physics/engine'
+import MachineryEngine from 'physics/machinery/engine'
+
+import Crank from 'blocks/machines/crank'
 import Piston from 'blocks/machines/piston'
 import WalkingBeam from 'blocks/machines/walking-beam'
 import Counterweight from 'blocks/machines/counterweight'
+
+import Shapes from 'util/shapes'
 
 
 export default class World {
@@ -41,9 +44,10 @@ export default class World {
 
         // Create some machines for testing the machinery engine
         const pistonA = new Piston (0.0002)
-        const pistonB = new Piston (0.00005)
+        const pistonB = new Piston (0.0002)
         const counterweight = new Counterweight ()
         const walkingBeam = new WalkingBeam ()
+        const crank = new Crank ()
 
         this.placeBlock (5, 1, 0)
         this.placeBlock (5, 1, -3)
@@ -51,8 +55,11 @@ export default class World {
         this.placeMachine (5, 1, -3, pistonB)
         this.placeMachine (8, 1, 0, counterweight)
         this.placeMachine (8, 1, -3, walkingBeam)
+        this.placeMachine (11, 1, -3, crank)
+
         this.machinery.connect (pistonA.connections.head, counterweight.connections.beam)
         this.machinery.connect (pistonB.connections.head, walkingBeam.connections.left)
+        this.machinery.connect (walkingBeam.connections.right, crank.connections.crankshaft)
 
         // Add event handlers
         this.streams.timer.onValue (dt => this.physics.step (dt))

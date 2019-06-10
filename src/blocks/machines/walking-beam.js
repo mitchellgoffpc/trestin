@@ -2,14 +2,21 @@ import * as Three from 'three'
 
 import Machine from 'blocks/machines'
 import Pivot from 'blocks/geometry/pivot'
-import BeamConnection from 'physics/machinery/connection/beam'
+import LinearConnection from 'physics/machinery/connections/linear'
 import GeometryBuilder from 'util/geometry'
+import M from 'util/math'
 
 
 export default class WalkingBeam extends Machine {
     connections = {
-        left:  new BeamConnection (this),
-        right: new BeamConnection (this) }
+        left:  new LinearConnection (this, {
+            accelerationInverted: true,
+            input: x => -Math.atan ((x - .75) / 3),
+            output: x => Math.tan (-x) * 3 + .75 }),
+
+        right: new LinearConnection (this, {
+            input: x => Math.atan ((x - .75) / 3),
+            output: x => Math.tan (x) * 3 + .75 }) }
 
     createMesh () {
         const builder = new GeometryBuilder ()
@@ -22,27 +29,9 @@ export default class WalkingBeam extends Machine {
 
         return builder.getMesh () }
 
-    getEffectiveMass (connection) {
-        return 1 }
+    checkBasePosition = position =>
+        Math.abs (position) <= Math.PI / 4
 
-    getAcceleration (connection) {
-        let deltaV = 0
-        if (connection !== this.connections.left) {
-            deltaV += this.connections.left.getAcceleration (this) }
-        if (connection !== this.connections.right) {
-            deltaV += this.connections.right.getAcceleration (this) }
-        return deltaV }
-
-    checkPosition = (connection, position) => do {
-        if (connection === this.connections.left)
-            position >= 0 && position <= 2 && this.connections.right.checkPosition (this, position)
-        else if (connection === this.connections.right)
-            position >= 0 && position <= 2 && this.connections.left.checkPosition (this, position) }
-
-    updatePosition (connection, position) {
-        if (connection === this.connections.left) {
-            this.connections.right.updatePosition (this, 2 - position) }
-        else if (connection === this.connections.right) {
-            this.connections.left.updatePosition (this, 2 - position) }
-
-        this.beam.rotation.z = -Math.atan ((this.connections.left.position - .75) / 3) }}
+    updateBasePosition = (position, velocity) => {
+        super.updateBasePosition (position, velocity)
+        this.beam.rotation.z = position }}

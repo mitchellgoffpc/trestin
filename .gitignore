@@ -1,5 +1,4 @@
-# Dependencies
 node_modules/
-
-# Build
 build/
+.DS_Store
+package-lock.json

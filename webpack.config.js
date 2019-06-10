@@ -15,14 +15,14 @@ module.exports = {
          filename: 'app.bundle.js' },
 
     resolve: {
-        extensions: ['.js'],
+        extensions: ['.ts', '.js'],
         modules: ['./src', './node_modules'] },
 
     module: {
         rules: [
             { test: /worker\.js$/,
               use: { loader: 'worker-loader' }},
-            { test: /\.js$/,
+            { test: /\.[jt]s$/,
               exclude: /node_modules/,
               use: { loader: 'babel-loader' }}]},
 

@@ -1,12 +1,12 @@
 import * as Three from 'three'
 
-import Physics from 'physics'
+import { PhysicsBlock } from 'physics'
 
 
 export default class Block {
     constructor (color) {
         this.mesh = this.createMesh (color)
-        this.body = new Physics.Block (this.mesh.uuid)
+        this.body = new PhysicsBlock (this.mesh.uuid)
         this.uuid = this.mesh.uuid }
 
     createMesh (color) {

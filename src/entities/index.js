@@ -1,7 +1,7 @@
 import * as Three from 'three'
 
-import Physics from 'physics'
 import Shapes from 'util/shapes'
+import { PhysicsEntity } from 'physics'
 
 
 export default class Entity {
@@ -12,7 +12,7 @@ export default class Entity {
         this.mesh = this.createMesh (properties)
         this.uuid = this.mesh.uuid
         if (this.needsPhysicsBody) {
-            this.body = new Physics.Entity (this.uuid, properties) }}
+            this.body = new PhysicsEntity (this.uuid, properties) }}
 
     createMesh (properties) {
         return new Three.Mesh (this.createGeometry (properties), this.createMaterial (properties)) }
