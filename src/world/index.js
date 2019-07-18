@@ -1,65 +1,40 @@
 import _ from 'lodash'
 import * as Three from 'three'
+import SimplexNoise from 'simplex-noise'
 
 import Entity from 'entities'
 import Chunk from 'world/chunk'
 import PhysicsEngine from 'physics/engine'
 import MachineryEngine from 'physics/machinery/engine'
-
-import Crank from 'blocks/machines/crank'
-import Piston from 'blocks/machines/piston'
-import WalkingBeam from 'blocks/machines/walking-beam'
-import Counterweight from 'blocks/machines/counterweight'
-
 import Shapes from 'util/shapes'
 
 
 export default class World {
     scene = new Three.Scene ()
     raycaster = new Three.Raycaster ()
+    noise = new SimplexNoise('seed')
     physics = new PhysicsEngine ()
     machinery = new MachineryEngine ()
 
     entities = {}
-    chunks = {
-        '0,0,0':   new Chunk (0, 0, 0, 0x2244FF),
-        '0,0,-1':  new Chunk (0, 0, -1, 0xDDAA33),
-        '-1,0,0':  new Chunk (-1, 0, 0, 0x22BB33),
-        '-1,0,-1': new Chunk (-1, 0, -1, 0xFF2211) }
+    chunks = {}
 
     constructor (streams) {
         this.streams = streams
         this.scene.background = new Three.Color (0xADCCFF)
         this.scene.add (new Three.AmbientLight (0x404040))
-        _.forEach (this.chunks, chunk => chunk.populate (this.scene, this.physics))
 
-        // Create some shapes for testing the physics engine
-        const sphere   = new Entity ({ shape: Shapes.SPHERE, color: 0xFFAA88, mass: 0.1, radius: 1 })
-        const box      = new Entity ({ shape: Shapes.BOX, color: 0xFFAA88, mass: 1, x: 3, y: 3, z: 3 })
-        const cylinder = new Entity ({ shape: Shapes.CYLINDER, color: 0xFFAA88, mass: 1, radius: 2, height: 2 })
+        const northLight = new Three.DirectionalLight (0xFFFFFF, 0.5)
+        const southLight = new Three.DirectionalLight (0xFFFFFF, 0.5)
+        northLight.position.set (100, 100, 50)
+        southLight.position.set (-100, 100, -50)
+        this.scene.add (northLight)
+        this.scene.add (southLight)
 
-        sphere.spawn   (this, 0, 10, 0)
-        box.spawn      (this, 8, 10, -8)
-        cylinder.spawn (this, -8, 10, -8)
-
-        // Create some machines for testing the machinery engine
-        const pistonA = new Piston (0.0002)
-        const pistonB = new Piston (0.0002)
-        const counterweight = new Counterweight ()
-        const walkingBeam = new WalkingBeam ()
-        const crank = new Crank ()
-
-        this.placeBlock (5, 1, 0)
-        this.placeBlock (5, 1, -3)
-        this.placeMachine (5, 1, 0, pistonA)
-        this.placeMachine (5, 1, -3, pistonB)
-        this.placeMachine (8, 1, 0, counterweight)
-        this.placeMachine (8, 1, -3, walkingBeam)
-        this.placeMachine (11, 1, -3, crank)
-
-        this.machinery.connect (pistonA.connections.head, counterweight.connections.beam)
-        this.machinery.connect (pistonB.connections.head, walkingBeam.connections.left)
-        this.machinery.connect (walkingBeam.connections.right, crank.connections.crankshaft)
+        // Spawn a bunch of chunks at level y = 0
+        for (let x = -1; x <= 1; x++) {
+            for (let z = -1; z <= 1; z++) {
+                this.chunks[`${x},0,${z}`] = new Chunk (x, 0, z, this.noise, this.scene, this.physics) }}
 
         // Add event handlers
         this.streams.timer.onValue (dt => this.physics.step (dt))
@@ -106,6 +81,11 @@ export default class World {
 
         return this.chunks[`${cx},${cy},${cz}`] }
 
+    getBlockForFaceIndex = (faceIndex, x, y, z) => {
+        const chunk = this.getChunkForPosition (x, y, z)
+        const [cx, cy, cz] = chunk.getBlockForFaceIndex (faceIndex)
+        return chunk.getWorldPosFromChunkPos (cx, cy, cz).join (",") }
+
     getIntersections = (position, direction) => {
         this.raycaster.set (position, direction)
         return this.raycaster.intersectObjects (this.scene.children) }
@@ -115,4 +95,9 @@ export default class World {
          .sortBy ('distance')
          .first  ()
          .value  ()
+
+    setBlockHighlight = (x, y, z, highlight) => {
+        const chunk = this.getChunkForPosition (x, y, z)
+        const [cx, cy, cz] = chunk.getChunkPosFromWorldPos (x, y, z)
+        chunk.setBlockHighlight (cx, cy, cz, highlight) }
 }

@@ -41,8 +41,10 @@ export default class Player {
 
         this.streams.placeBlock.onValue (this.handlePlaceBlock)
         this.streams.destroyBlock.onValue (this.handleDestroyBlock)
-        this.streams.crosshairTarget.diff    (null, (previous, next) => [previous, next])
-                                    .onValue (this.handleHighlightCrosshairTarget) }
+        this.streams.crosshairTarget
+            .map     (this.getBlockForFaceIndex)
+            .diff    (null, (previous, next) => [previous, next])
+            .onValue (this.handleHighlightCrosshairTarget) }
 
 
     // Create the event streams for this player
@@ -106,11 +108,12 @@ export default class Player {
         this.camera.position.z = position.z }
 
     handleHighlightCrosshairTarget = ([previous, next]) => {
-        if (next && (!previous || previous.object !== next.object)) {
-            next.object.material.originalColor = next.object.material.color.clone()
-            next.object.material.color.add (new Three.Color (0.2, 0.2, 0.2)) }
-        if (previous && (!next || previous.object !== next.object)) {
-            previous.object.material.color.copy (previous.object.material.originalColor) }}
+        if (next && (!previous || next !== previous)) {
+            const [x, y, z] = next.split(",").map(x => parseInt (x))
+            this.world.setBlockHighlight (x, y, z, true) }
+        if (previous && (!next || next !== previous)) {
+            const [x, y, z] = previous.split(",").map(x => parseInt (x))
+            this.world.setBlockHighlight (x, y, z, false) }}
 
     handlePlaceBlock = target => {
         const direction = Directions.getDirectionFromFaceIndex (target.faceIndex)
@@ -137,4 +140,10 @@ export default class Player {
         let rx = dx % (Math.PI * 2)
         let ry = M.clamp (dy, -yLimit, yLimit)
         return new Three.Vector2 (rx, ry) }
+
+    getBlockForFaceIndex = target => {
+        if (target) {
+             const { x, y, z } = target.object.position
+             return this.world.getBlockForFaceIndex (target.faceIndex, x, y, z) }
+        else return null }
 }
