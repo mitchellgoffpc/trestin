@@ -1,19 +1,16 @@
-import * as Three from 'three'
+import _ from 'lodash'
 
-import { PhysicsBlock } from 'physics'
+// Helper function
+const replicate = (data, n) => _.flatten (_.times (n, () => data))
 
 
-export default class Block {
-    constructor (color) {
-        this.mesh = this.createMesh (color)
-        this.body = new PhysicsBlock (this.mesh.uuid)
-        this.uuid = this.mesh.uuid }
+// Block class
+class Block {
+    constructor (color, highlightColor) {
+        this.colorData = replicate (color, 3)
+        this.highlightColorData = replicate (highlightColor, 3) }}
 
-    createMesh (color) {
-        return new Three.Mesh (this.createGeometry (), this.createMaterial (color)) }
 
-    createGeometry () {
-        return new Three.BoxGeometry (1, 1, 1) }
-
-    createMaterial (color) {
-        return new Three.MeshLambertMaterial ({ color }) }}
+// Block types
+export const Dirt = new Block([.9, .525, .325], [.95, .625, .4])
+export const Grass = new Block([.215, .6, .25], [.265, .7, .325])

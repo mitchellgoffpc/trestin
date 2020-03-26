@@ -16,8 +16,8 @@ export default class World {
     physics = new PhysicsEngine ()
     machinery = new MachineryEngine ()
 
-    entities = {}
     chunks = {}
+    entities = {}
 
     constructor (streams) {
         this.streams = streams
@@ -45,17 +45,32 @@ export default class World {
 
     // Methods for creating blocks and entities
 
+    placeBlockOnChunkFace = (x, y, z, faceIndex, block) => {
+        const chunk = this.getChunkForPosition (x, y, z)
+        if (chunk) {
+            chunk.placeBlockOnFace (faceIndex, block) }}
+
     placeBlock = (x, y, z, block) => {
         const chunk = this.getChunkForPosition (x, y, z)
         if (chunk) {
             const coord = i => i >= 0 ? i % 16 : i % 16 + 16
-            const { mesh, body } = chunk.placeBlock (coord(x), coord(y), coord(z), { block })
-            this.scene.add (mesh)
-            this.physics.addBlock (body, x, y, z) }}
+            chunk.placeBlock (coord(x), coord(y), coord(z), block)
+            this.physics.addBlock (x, y, z, block.uuid) }}
 
     placeMachine = (x, y, z, machine) => {
         this.placeBlock (x, y, z, machine)
         this.machinery.addMachine (machine) }
+
+    spawnEntity = (x, y, z, entity) => {
+        entity.mesh.position.set (x, y, z)
+        this.scene.add (entity.mesh)
+        this.entities[entity.uuid] = entity
+
+        if (entity.needsPhysicsBody) {
+            this.physics.addEntity (x, y, z, entity.uuid, entity.properties) }
+        if (entity.needsGameTick) {
+            this.streams.timer.onValue (() => entity.tick()) }}
+
 
     // Methods for destroying blocks and entities
 
@@ -63,13 +78,13 @@ export default class World {
         const { x, y, z } = block.position
         const chunk = this.getChunkForPosition (x, y, z)
         if (chunk && y > 0) {
-            const { mesh, body } = chunk.destroyBlock (block.uuid)
+            const { mesh } = chunk.destroyBlock (block.uuid)
             this.scene.remove (mesh)
-            this.physics.removeBlock (body) }}
+            this.physics.removeBlock (block.uuid) }}
 
     destroyEntity = entity => {
         this.scene.remove (entity.mesh)
-        this.physics.removeEntity (entity.body)
+        this.physics.removeEntity (entity.uuid)
         delete this.entities[entity.uuid] }
 
     // Helper methods

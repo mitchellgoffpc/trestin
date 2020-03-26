@@ -2,8 +2,11 @@ import _ from 'lodash'
 import Bacon from 'baconjs'
 import * as Three from 'three'
 
+import Entity from 'entities'
+import { Grass } from 'blocks'
 import M from 'util/math'
-import Directions from 'util/directions'
+import Shapes from 'util/shapes'
+
 
 // Constants
 const UP = new Three.Vector3 (0, 1, 0)
@@ -24,16 +27,27 @@ const handlers = {
     87: forward => forward }
 
 
+
+// Player entity class
+class PlayerEntity extends Entity {
+    constructor (player) {
+        super ({ shape: Shapes.CYLINDER, radius: 0.5, height: 2 })
+        this.player = player }}
+
+
 // Player class
 export default class Player {
     camera = new Three.PerspectiveCamera (45, 1, 0.1, 1000)
 
     constructor (streams, world) {
+        let playerEntity = new PlayerEntity()
+        let { x, y, z } = initialPosition
+
         this.handleResizeCamera ()
         this.createEventStreams (streams)
 
         this.world = world
-        // this.world.createEntity (playerEntity)
+        this.world.spawnEntity (x, y, z, playerEntity)
 
         this.streams.resize.onValue (this.handleResizeCamera)
         this.streams.movement.onValue (this.handleMoveCamera)
@@ -100,7 +114,7 @@ export default class Player {
         this.camera.updateProjectionMatrix () }
 
     handleRotateCamera = gaze => {
-        this.camera.lookAt (this.camera.position.clone().add(gaze)) }
+        this.camera.lookAt (this.camera.position.clone () .add (gaze)) }
 
     handleMoveCamera = position => {
         this.camera.position.x = position.x
@@ -109,19 +123,18 @@ export default class Player {
 
     handleHighlightCrosshairTarget = ([previous, next]) => {
         if (next && (!previous || next !== previous)) {
-            const [x, y, z] = next.split(",").map(x => parseInt (x))
+            const [x, y, z] = next.split (",") .map (x => parseInt (x))
             this.world.setBlockHighlight (x, y, z, true) }
         if (previous && (!next || next !== previous)) {
-            const [x, y, z] = previous.split(",").map(x => parseInt (x))
+            const [x, y, z] = previous.split (",") .map (x => parseInt (x))
             this.world.setBlockHighlight (x, y, z, false) }}
 
     handlePlaceBlock = target => {
-        const direction = Directions.getDirectionFromFaceIndex (target.faceIndex)
-        const { x, y, z } = direction.toUnitVector().add(target.object.position)
-        this.world.placeBlock (x, y, z) }
+        const { x, y, z } = target.object.position
+        this.world.placeBlockOnChunkFace (x, y, z, target.faceIndex, Grass) }
 
-    handleDestroyBlock = target => {
-        this.world.destroyBlock (target.object) }
+    handleDestroyBlock = target =>
+        this.world.destroyBlock (target.object)
 
 
     // Helper functions

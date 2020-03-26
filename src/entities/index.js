@@ -1,7 +1,6 @@
 import * as Three from 'three'
 
 import Shapes from 'util/shapes'
-import { PhysicsEntity } from 'physics'
 
 
 export default class Entity {
@@ -10,9 +9,7 @@ export default class Entity {
 
     constructor (properties = {}) {
         this.mesh = this.createMesh (properties)
-        this.uuid = this.mesh.uuid
-        if (this.needsPhysicsBody) {
-            this.body = new PhysicsEntity (this.uuid, properties) }}
+        this.properties = properties }
 
     createMesh (properties) {
         return new Three.Mesh (this.createGeometry (properties), this.createMaterial (properties)) }
@@ -29,12 +26,6 @@ export default class Entity {
             return new Three.CylinderGeometry (properties.radius, properties.radius, properties.height, 16) }
 
     tick () {}
-    spawn (world, x, y, z) {
-        world.scene.add (this.mesh)
-        world.entities[this.uuid] = this
-        this.mesh.position.set (x, y, z)
 
-        if (this.needsPhysicsBody) {
-            world.physics.addEntity (this.body, x, y, z) }
-        if (this.needsGameTick) {
-            world.streams.timer.onValue (() => this.tick()) }}}
+    get uuid() {
+        return this.mesh.uuid }}

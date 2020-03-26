@@ -31,41 +31,39 @@ function step ({ dt }) {
     world.step (dt)
     self.postMessage ({ entities: _.mapValues (entities, body => body.position) }) }
 
-function addBlock ({ block, position }) {
+function addBlock ({ uuid, position: { x, y, z }}) {
     const body = new Cannon.Body ({ shape: blockShape, mass: 0 })
-    body.position.set (position.x, position.y, position.z)
+    body.position.set (x, y, z)
     world.addBody (body)
-    blocks[block.uuid] = body }
+    blocks[uuid] = body }
 
-function addEntity ({ entity, position }) {
-    const body = new Cannon.Body ({ shape: getShape (entity), mass: entity.mass })
-    body.position.set (position.x, position.y, position.z)
+function addEntity ({ uuid, properties, position: { x, y, z }}) {
+    const body = new Cannon.Body ({ shape: getCannonBody (properties), mass: properties.mass })
+    body.position.set (x, y, z)
     world.addBody (body)
-    entities[entity.uuid] = body }
+    entities[uuid] = body }
 
-function removeBlock ({ block }) {
-    const body = blocks[block.uuid]
-    delete blocks[block.uuid]
-    world.removeBody (body) }
+function removeBlock ({ uuid }) {
+    world.removeBody (blocks[uuid])
+    delete blocks[uuid] }
 
-function removeEntity ({ entity }) {
-    const body = entities[entity.uuid]
-    delete entities[entity.uuid]
-    world.removeBody (body) }
+function removeEntity ({ uuid }) {
+    world.removeBody (entities[uuid])
+    delete entities[uuid] }
 
 
 // Helper functions
 
-const getShape = entity => do {
-    if (entity.shape === Shapes.BOX)
-        new Cannon.Box (new Cannon.Vec3 (entity.x / 2, entity.y / 2, entity.z / 2))
-    else if (entity.shape === Shapes.SPHERE)
-        new Cannon.Sphere (entity.radius)
-    else if (entity.shape === Shapes.CYLINDER) {
-        getRotatedCylinder (entity) }}
+const getCannonBody = properties => do {
+    if (properties.shape === Shapes.BOX)
+        new Cannon.Box (new Cannon.Vec3 (properties.x / 2, properties.y / 2, properties.z / 2))
+    else if (properties.shape === Shapes.SPHERE)
+        new Cannon.Sphere (properties.radius)
+    else if (properties.shape === Shapes.CYLINDER)
+        getRotatedCylinder (properties) }
 
-const getRotatedCylinder = entity => {
-    const cylinder = new Cannon.Cylinder (entity.radius, entity.radius, entity.height, 16)
+const getRotatedCylinder = properties => {
+    const cylinder = new Cannon.Cylinder (properties.radius, properties.radius, properties.height, 16)
     const translation = new Cannon.Vec3 (0, 0, 0)
     const rotation = new Cannon.Quaternion ()
     rotation.setFromAxisAngle (new Cannon.Vec3 (1, 0, 0), -Math.PI / 2)

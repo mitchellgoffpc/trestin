@@ -3,22 +3,23 @@ import { Vector3 } from 'three'
 
 // Direction inner class
 class Direction {
-    constructor (name, x, y, z) {
+    constructor (name, axis, x, y, z) {
         this.name = name
+        this.axis = axis
         this.vector = new Vector3 (x, y, z) }
 
-    toUnitVector = () =>
-        this.vector.clone() }
+    toString = () => this.name
+    toUnitVector = () => this.vector.clone() }
 
 
 // Directions enum
 export default class Directions {
-    static UP    = new Direction ("UP", 0, 1, 0)
-    static DOWN  = new Direction ("DOWN", 0, -1, 0)
-    static NORTH = new Direction ("NORTH", 0, 0, 1)
-    static SOUTH = new Direction ("SOUTH", 0, 0, -1)
-    static WEST  = new Direction ("WEST", 1, 0, 0)
-    static EAST  = new Direction ("EAST", -1, 0, 0)
+    static UP    = new Direction ("UP", "y", 0, 1, 0)
+    static DOWN  = new Direction ("DOWN", "y", 0, -1, 0)
+    static NORTH = new Direction ("NORTH", "z", 0, 0, 1)
+    static SOUTH = new Direction ("SOUTH", "z", 0, 0, -1)
+    static WEST  = new Direction ("WEST", "x", 1, 0, 0)
+    static EAST  = new Direction ("EAST", "x", -1, 0, 0)
 
     static getDirectionFromFaceIndex = faceIndex => do {
         if (faceIndex === 0 || faceIndex === 1)

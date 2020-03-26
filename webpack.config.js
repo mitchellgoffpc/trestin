@@ -5,7 +5,6 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = {
     mode: process.env.NODE_ENV || 'production',
-    devtool: 'source-map',
     stats: { colors: true },
 
     entry: './src/index.js',

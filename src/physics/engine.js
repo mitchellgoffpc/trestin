@@ -17,12 +17,12 @@ export default class PhysicsEngine {
     // API Methods
     step = dt => this.worker.postMessage ({ message: "step", dt: dt || 1 / 60 })
 
-    addBlock = (block, x, y, z) =>
-        this.worker.postMessage ({ message: "addBlock", position: { x, y, z }, block })
-    addEntity = (entity, x, y, z) =>
-        this.worker.postMessage ({ message: "addEntity", position: { x, y, z }, entity })
+    addBlock = (x, y, z, uuid) =>
+        this.worker.postMessage ({ message: "addBlock", uuid, position: { x, y, z }})
+    addEntity = (x, y, z, uuid, properties) =>
+        this.worker.postMessage ({ message: "addEntity", uuid, properties, position: { x, y, z }})
 
-    removeBlock = block =>
-        this.worker.postMessage ({ message: "removeBlock", block })
-    removeEntity = entity =>
-        this.worker.postMessage ({ message: "removeEntity", entity }) }
+    removeBlock = uuid =>
+        this.worker.postMessage ({ message: "removeBlock", uuid })
+    removeEntity = uuid =>
+        this.worker.postMessage ({ message: "removeEntity", uuid }) }
