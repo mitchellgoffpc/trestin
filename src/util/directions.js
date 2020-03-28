@@ -8,8 +8,11 @@ class Direction {
         this.axis = axis
         this.vector = new Vector3 (x, y, z) }
 
-    toString = () => this.name
-    toUnitVector = () => this.vector.clone() }
+    toString () { return this.name }
+    toUnitVector () { return this.vector.clone() }
+
+    get opposite () {
+        return Directions.Opposites[this.name] }}
 
 
 // Directions enum
@@ -20,6 +23,19 @@ export default class Directions {
     static SOUTH = new Direction ("SOUTH", "z", 0, 0, -1)
     static WEST  = new Direction ("WEST", "x", 1, 0, 0)
     static EAST  = new Direction ("EAST", "x", -1, 0, 0)
+
+    static All =
+        [Directions.UP,    Directions.DOWN,
+         Directions.NORTH, Directions.SOUTH,
+         Directions.WEST,  Directions.EAST]
+
+    static Opposites =
+        { [Directions.UP]:    Directions.DOWN,
+          [Directions.DOWN]:  Directions.UP,
+          [Directions.NORTH]: Directions.SOUTH,
+          [Directions.SOUTH]: Directions.NORTH,
+          [Directions.WEST]:  Directions.EAST,
+          [Directions.EAST]:  Directions.WEST }
 
     static getDirectionFromFaceIndex = faceIndex => do {
         if (faceIndex === 0 || faceIndex === 1)
@@ -32,4 +48,5 @@ export default class Directions {
              Directions.DOWN
         else if (faceIndex === 8 || faceIndex === 9)
              Directions.NORTH
-        else Directions.SOUTH }}
+        else Directions.SOUTH }
+}

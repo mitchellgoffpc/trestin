@@ -18,8 +18,9 @@ window.onload = () => {
     document.body.appendChild (renderer.domElement)
 
     // Render loop
-    function draw () {
+    function draw (timestamp) {
         requestAnimationFrame (draw)
+        streams.draw.push (timestamp)
         renderer.render (world.scene, player.camera) }
 
     draw ()

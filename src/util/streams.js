@@ -15,7 +15,7 @@ export function initializeEventStreams () {
              keyDown:   Bacon.fromEvent (document, "keydown"),
              keyUp:     Bacon.fromEvent (document, "keyup"),
              resize:    Bacon.fromEvent (window, "resize"),
-             timer:     Bacon.interval (15, null) }}
+             draw:      new Bacon.Bus () }}
 
 
 // Helper functions

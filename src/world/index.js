@@ -7,7 +7,18 @@ import Chunk from 'world/chunk'
 import PhysicsEngine from 'physics/engine'
 import MachineryEngine from 'physics/machinery/engine'
 import Shapes from 'util/shapes'
+import { coords, getCoordsForPosition, getPositionForCoords } from 'util/coordinates'
 
+// Helper functions
+
+const coord = i =>
+    i >= 0 ? i % 16 : i % 16 + 16
+
+const getChunkPosition = ({ x, y, z }) =>
+    ({ x: coord (x), y: coord (y), z: coord (z) })
+
+
+// World class
 
 export default class World {
     scene = new Three.Scene ()
@@ -32,36 +43,34 @@ export default class World {
         this.scene.add (southLight)
 
         // Spawn a bunch of chunks at level y = 0
-        for (let x = -1; x <= 1; x++) {
-            for (let z = -1; z <= 1; z++) {
+        for (let x = -2; x <= 2; x++) {
+            for (let z = -2; z <= 2; z++) {
                 this.chunks[`${x},0,${z}`] = new Chunk (x, 0, z, this.noise, this.scene, this.physics) }}
 
         // Add event handlers
-        this.streams.timer.onValue (dt => this.physics.step (dt))
-        this.streams.timer.onValue (dt => this.machinery.step (dt))
+        this.streams.draw.onValue (dt => this.physics.step (dt))
+        this.streams.draw.onValue (dt => this.machinery.step (dt))
         this.physics.onStep (({ entities }) =>
             _.forEach (entities, ({ x, y, z }, uuid) => {
                 this.entities[uuid].mesh.position.set (x, y, z) })) }
 
     // Methods for creating blocks and entities
 
-    placeBlockOnChunkFace = (x, y, z, faceIndex, block) => {
-        const chunk = this.getChunkForPosition (x, y, z)
-        if (chunk) {
-            chunk.placeBlockOnFace (faceIndex, block) }}
+    placeBlockOnChunkFace = (position, faceIndex, block) => {
+        const chunk = this.getChunkForPosition (position)
+        if (chunk) { chunk.placeBlockOnFace (faceIndex, block) }}
 
-    placeBlock = (x, y, z, block) => {
-        const chunk = this.getChunkForPosition (x, y, z)
+    placeBlock = (position, block) => {
+        const chunk = this.getChunkForPosition (position)
         if (chunk) {
-            const coord = i => i >= 0 ? i % 16 : i % 16 + 16
-            chunk.placeBlock (coord(x), coord(y), coord(z), block)
-            this.physics.addBlock (x, y, z, block.uuid) }}
+            chunk.placeBlock (getChunkPosition (position), block)
+            this.physics.addBlock (position.x, position.y, position.z, block.uuid) }}
 
-    placeMachine = (x, y, z, machine) => {
-        this.placeBlock (x, y, z, machine)
+    placeMachine = (position, machine) => {
+        this.placeBlock (position, machine)
         this.machinery.addMachine (machine) }
 
-    spawnEntity = (x, y, z, entity) => {
+    spawnEntity = ({ x, y, z }, entity) => {
         entity.mesh.position.set (x, y, z)
         this.scene.add (entity.mesh)
         this.entities[entity.uuid] = entity
@@ -75,12 +84,15 @@ export default class World {
     // Methods for destroying blocks and entities
 
     destroyBlock = block => {
-        const { x, y, z } = block.position
-        const chunk = this.getChunkForPosition (x, y, z)
-        if (chunk && y > 0) {
+        const chunk = this.getChunkForPosition (block.position)
+        if (chunk && block.position.y > 0) {
             const { mesh } = chunk.destroyBlock (block.uuid)
             this.scene.remove (mesh)
             this.physics.removeBlock (block.uuid) }}
+
+    destroyBlockWithFace = (position, faceIndex) => {
+        const chunk = this.getChunkForPosition (position)
+        if (chunk) { chunk.destroyBlockWithFace (faceIndex) }}
 
     destroyEntity = entity => {
         this.scene.remove (entity.mesh)
@@ -89,17 +101,12 @@ export default class World {
 
     // Helper methods
 
-    getChunkForPosition = (x, y, z) => {
-        const cx = Math.floor (x / 16)
-        const cy = Math.floor (y / 16)
-        const cz = Math.floor (z / 16)
+    getChunkForPosition = ({ x, y, z }) =>
+        this.chunks[coords (Math.floor (x / 16), Math.floor (y / 16), Math.floor (z / 16))]
 
-        return this.chunks[`${cx},${cy},${cz}`] }
-
-    getBlockForFaceIndex = (faceIndex, x, y, z) => {
-        const chunk = this.getChunkForPosition (x, y, z)
-        const [cx, cy, cz] = chunk.getBlockForFaceIndex (faceIndex)
-        return chunk.getWorldPosFromChunkPos (cx, cy, cz).join (",") }
+    getBlockPositionForFaceIndex = (position, faceIndex) => {
+        const chunk = this.getChunkForPosition (position)
+        return chunk.getWorldPosFromChunkPos (getPositionForCoords (chunk.faceIndexPositions[faceIndex])) }
 
     getIntersections = (position, direction) => {
         this.raycaster.set (position, direction)
@@ -111,8 +118,7 @@ export default class World {
          .first  ()
          .value  ()
 
-    setBlockHighlight = (x, y, z, highlight) => {
-        const chunk = this.getChunkForPosition (x, y, z)
-        const [cx, cy, cz] = chunk.getChunkPosFromWorldPos (x, y, z)
-        chunk.setBlockHighlight (cx, cy, cz, highlight) }
+    setBlockHighlight = (position, highlight) => {
+        const chunk = this.getChunkForPosition (position)
+        chunk.setBlockHighlight (chunk.getChunkPosFromWorldPos (position), highlight) }
 }

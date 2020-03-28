@@ -26,9 +26,12 @@ const handlers = {
     83: forward => forward.negate (),
     87: forward => forward }
 
+const eq = (a, b) =>
+    a.x === b.x && a.y === b.y && a.z === b.z
 
 
 // Player entity class
+
 class PlayerEntity extends Entity {
     constructor (player) {
         super ({ shape: Shapes.CYLINDER, radius: 0.5, height: 2 })
@@ -36,18 +39,18 @@ class PlayerEntity extends Entity {
 
 
 // Player class
+
 export default class Player {
     camera = new Three.PerspectiveCamera (45, 1, 0.1, 1000)
 
     constructor (streams, world) {
         let playerEntity = new PlayerEntity()
-        let { x, y, z } = initialPosition
 
         this.handleResizeCamera ()
         this.createEventStreams (streams)
 
         this.world = world
-        this.world.spawnEntity (x, y, z, playerEntity)
+        this.world.spawnEntity (initialPosition, playerEntity)
 
         this.streams.resize.onValue (this.handleResizeCamera)
         this.streams.movement.onValue (this.handleMoveCamera)
@@ -56,7 +59,7 @@ export default class Player {
         this.streams.placeBlock.onValue (this.handlePlaceBlock)
         this.streams.destroyBlock.onValue (this.handleDestroyBlock)
         this.streams.crosshairTarget
-            .map     (this.getBlockForFaceIndex)
+            .map     (this.getBlockPositionForFaceIndex)
             .diff    (null, (previous, next) => [previous, next])
             .onValue (this.handleHighlightCrosshairTarget) }
 
@@ -85,7 +88,7 @@ export default class Player {
 
             return down.awaiting  (up)
                        .filter    (streams.controlsEnabled)
-                       .sampledBy (streams.timer)
+                       .sampledBy (streams.draw)
                        .filter    (truthy)
                        .map       (streams.rotation)
                        .map       (this.getMovementVector (keyCode)) })
@@ -122,19 +125,16 @@ export default class Player {
         this.camera.position.z = position.z }
 
     handleHighlightCrosshairTarget = ([previous, next]) => {
-        if (next && (!previous || next !== previous)) {
-            const [x, y, z] = next.split (",") .map (x => parseInt (x))
-            this.world.setBlockHighlight (x, y, z, true) }
-        if (previous && (!next || next !== previous)) {
-            const [x, y, z] = previous.split (",") .map (x => parseInt (x))
-            this.world.setBlockHighlight (x, y, z, false) }}
+        if (next && (!previous || !eq (next, previous))) {
+            this.world.setBlockHighlight (next, true) }
+        if (previous && (!next || !eq (next, previous))) {
+            this.world.setBlockHighlight (previous, false) }}
 
-    handlePlaceBlock = target => {
-        const { x, y, z } = target.object.position
-        this.world.placeBlockOnChunkFace (x, y, z, target.faceIndex, Grass) }
+    handlePlaceBlock = target =>
+        this.world.placeBlockOnChunkFace (target.object.position, target.faceIndex, Grass)
 
     handleDestroyBlock = target =>
-        this.world.destroyBlock (target.object)
+        this.world.destroyBlockWithFace (target.object.position, target.faceIndex)
 
 
     // Helper functions
@@ -154,9 +154,7 @@ export default class Player {
         let ry = M.clamp (dy, -yLimit, yLimit)
         return new Three.Vector2 (rx, ry) }
 
-    getBlockForFaceIndex = target => {
-        if (target) {
-             const { x, y, z } = target.object.position
-             return this.world.getBlockForFaceIndex (target.faceIndex, x, y, z) }
-        else return null }
-}
+    getBlockPositionForFaceIndex = target => do {
+        if (target)
+             this.world.getBlockPositionForFaceIndex (target.object.position, target.faceIndex)
+        else null }}
