@@ -2,8 +2,8 @@ import _ from 'lodash'
 import Bacon from 'baconjs'
 import * as Three from 'three'
 
+import Blocks from 'blocks'
 import Entity from 'entities'
-import { Grass } from 'blocks'
 import M from 'util/math'
 import Shapes from 'util/shapes'
 
@@ -15,8 +15,8 @@ const SQUARE = new Three.Vector3 (1, 0, 1)
 
 const truthy = Boolean
 const yLimit = Math.PI / 2 - 0.0001
-const initialRotation = new Three.Vector2 (0, 0)
-const initialPosition = new Three.Vector3 (8, 5, 12)
+const initialRotation = new Three.Vector2 (Math.PI, 0)
+const initialPosition = new Three.Vector3 (8, 48, 12)
 
 const handlers = {
     16: () => DOWN,
@@ -61,7 +61,9 @@ export default class Player {
         this.streams.crosshairTarget
             .map     (this.getBlockPositionForFaceIndex)
             .diff    (null, (previous, next) => [previous, next])
-            .onValue (this.handleHighlightCrosshairTarget) }
+            .onValue (this.handleHighlightCrosshairTarget)
+
+        this.streams.movement.onValue (this.handleRefreshChunks) }
 
 
     // Create the event streams for this player
@@ -81,17 +83,20 @@ export default class Player {
                          .map    (M.getDirectionVector)
 
     createMovementStream = streams => {
-        let movementStreams = _.map(handlers, (value, key) => {
+        let movementStreams = _.map (handlers, (value, key) => {
             let keyCode = parseInt(key)
             let down = streams.keyDown.filter (e => e.which === keyCode)
             let up   = streams.keyUp.filter (e => e.which === keyCode)
 
-            return down.awaiting  (up)
-                       .filter    (streams.controlsEnabled)
-                       .sampledBy (streams.draw)
-                       .filter    (truthy)
-                       .map       (streams.rotation)
-                       .map       (this.getMovementVector (keyCode)) })
+            let movementWithTimeDelta =
+                down.awaiting  (up)
+                    .filter    (streams.controlsEnabled)
+                    .sampledBy (streams.step, (moving, dt) => ({ moving, dt }))
+                    .filter    (({ moving }) => moving)
+                    .map       (({ dt }) => dt)
+
+            return streams.rotation.sampledBy (movementWithTimeDelta, (rotation, dt) => ({ rotation, dt }))
+                                   .map       (({ rotation, dt }) => this.getMovementVector (keyCode, rotation, dt)) })
 
         return Bacon.mergeAll (movementStreams)
                     .scan     (initialPosition, this.getNewPosition) }
@@ -131,18 +136,26 @@ export default class Player {
             this.world.setBlockHighlight (previous, false) }}
 
     handlePlaceBlock = target =>
-        this.world.placeBlockOnChunkFace (target.object.position, target.faceIndex, Grass)
+        this.world.placeBlockOnChunkFace (target.object.position, target.faceIndex, Blocks.Grass)
 
     handleDestroyBlock = target =>
         this.world.destroyBlockWithFace (target.object.position, target.faceIndex)
 
+    handleRefreshChunks = position => {}
+        // for (let y = position.y - 16 * 16; y < position.y + 16 * 16; y += 16) {
+        //     for (let z = position.z - 16 * 16; z < position.z + 16 * 16; z += 16) {
+        //         let x = position.x + 16 * 16
+        //         this.world.loadChunk (x, y, z) }}}
+
 
     // Helper functions
 
-    getMovementVector = keyCode => gaze =>
-        handlers[keyCode] (gaze.clone     ()
-                               .multiply  (SQUARE)
+    getMovementVector = (keyCode, gaze, dt) =>
+        handlers[keyCode] (gaze.clone ()
+                               .multiply (SQUARE)
                                .normalize ())
+            .clone ()
+            .multiplyScalar (dt / 16)
 
     getNewPosition = (position, movement) =>
         position.addScaledVector (movement, 0.1)

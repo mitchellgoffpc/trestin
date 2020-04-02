@@ -3,9 +3,10 @@ import { Vector3 } from 'three'
 
 // Direction inner class
 class Direction {
-    constructor (name, axis, x, y, z) {
+    constructor (name, axis, index, x, y, z) {
         this.name = name
         this.axis = axis
+        this.index = index
         this.vector = new Vector3 (x, y, z) }
 
     toString () { return this.name }
@@ -17,12 +18,12 @@ class Direction {
 
 // Directions enum
 export default class Directions {
-    static UP    = new Direction ("UP", "y", 0, 1, 0)
-    static DOWN  = new Direction ("DOWN", "y", 0, -1, 0)
-    static NORTH = new Direction ("NORTH", "z", 0, 0, 1)
-    static SOUTH = new Direction ("SOUTH", "z", 0, 0, -1)
-    static WEST  = new Direction ("WEST", "x", 1, 0, 0)
-    static EAST  = new Direction ("EAST", "x", -1, 0, 0)
+    static UP    = new Direction ("UP",    "y", 0,  0,  1,  0)
+    static DOWN  = new Direction ("DOWN",  "y", 1,  0, -1,  0)
+    static NORTH = new Direction ("NORTH", "z", 2,  0,  0,  1)
+    static SOUTH = new Direction ("SOUTH", "z", 3,  0,  0, -1)
+    static WEST  = new Direction ("WEST",  "x", 4,  1,  0,  0)
+    static EAST  = new Direction ("EAST",  "x", 5, -1,  0,  0)
 
     static All =
         [Directions.UP,    Directions.DOWN,
