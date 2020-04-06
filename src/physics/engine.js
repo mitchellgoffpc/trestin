@@ -1,4 +1,4 @@
-import PhysicsWorker from 'physics/worker'
+import PhysicsWorker from 'physics/engine.worker'
 
 
 // PhysicsEngine class

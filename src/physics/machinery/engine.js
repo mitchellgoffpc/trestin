@@ -1,4 +1,5 @@
-import _ from 'lodash'
+import pull from 'lodash-es/pull'
+import forEach from 'lodash-es/forEach'
 
 import Joint from 'physics/machinery/joints'
 
@@ -7,10 +8,10 @@ export default class MachineryEngine {
     joints = []
 
     addMachine (machine) {
-        _.forEach (machine.connections, connection => this.joints.push (connection.joint)) }
+        forEach (machine.connections, connection => this.joints.push (connection.joint)) }
 
     connect (connectionA, connectionB) {
-        _.pull (this.joints, connectionA.joint, connectionB.joint)
+        pull (this.joints, connectionA.joint, connectionB.joint)
 
         const newJoint = new Joint (connectionA, connectionB)
         const jointA = connectionA.joint
@@ -27,9 +28,9 @@ export default class MachineryEngine {
             throw new Error ("These two connections can't be joined") }}
 
     step () {
-        _.forEach (this.joints, joint => joint.clear ())
-        _.forEach (this.joints, joint => joint.calculateEffectiveMass ())
-        _.forEach (this.joints, joint => this.updateJointPosition (joint)) }
+        forEach (this.joints, joint => joint.clear ())
+        forEach (this.joints, joint => joint.calculateEffectiveMass ())
+        forEach (this.joints, joint => this.updateJointPosition (joint)) }
 
     updateJointPosition (joint) {
         if (!joint.didCalculateAcceleration) {

@@ -1,4 +1,4 @@
-import { Vector3 } from 'three'
+import keyBy from 'lodash-es/keyBy'
 
 
 // Direction inner class
@@ -7,10 +7,12 @@ class Direction {
         this.name = name
         this.axis = axis
         this.index = index
-        this.vector = new Vector3 (x, y, z) }
+        this.vector = { x, y, z }}
 
     toString () { return this.name }
-    toUnitVector () { return this.vector.clone() }
+
+    getAdjacentPosition ({ x, y, z }) {
+        return { x: x + this.vector.x, y: y + this.vector.y, z: z + this.vector.z }}
 
     get opposite () {
         return Directions.Opposites[this.name] }}
@@ -38,16 +40,8 @@ export default class Directions {
           [Directions.WEST]:  Directions.EAST,
           [Directions.EAST]:  Directions.WEST }
 
-    static getDirectionFromFaceIndex = faceIndex => do {
-        if (faceIndex === 0 || faceIndex === 1)
-             Directions.WEST
-        else if (faceIndex === 2 || faceIndex === 3)
-             Directions.EAST
-        else if (faceIndex === 4 || faceIndex === 5)
-             Directions.UP
-        else if (faceIndex === 6 || faceIndex === 7)
-             Directions.DOWN
-        else if (faceIndex === 8 || faceIndex === 9)
-             Directions.NORTH
-        else Directions.SOUTH }
+    static ByName = keyBy (Directions.All, 'name')
+
+    static getAdjacentPositions = position =>
+        Directions.All.map (direction => ({ direction, adjacentPosition: direction.getAdjacentPosition (position) }))
 }

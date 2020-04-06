@@ -1,6 +1,7 @@
-import _ from 'lodash'
 import Bacon from 'baconjs'
 import * as Three from 'three'
+import map from 'lodash-es/map'
+import range from 'lodash-es/range'
 
 import Blocks from 'blocks'
 import Entity from 'entities'
@@ -9,11 +10,12 @@ import Shapes from 'util/shapes'
 
 
 // Constants
+
 const UP = new Three.Vector3 (0, 1, 0)
 const DOWN = new Three.Vector3 (0, -1, 0)
 const SQUARE = new Three.Vector3 (1, 0, 1)
+const RENDER_DISTANCE = 20
 
-const truthy = Boolean
 const yLimit = Math.PI / 2 - 0.0001
 const initialRotation = new Three.Vector2 (Math.PI, 0)
 const initialPosition = new Three.Vector3 (8, 48, 12)
@@ -26,8 +28,23 @@ const handlers = {
     83: forward => forward.negate (),
     87: forward => forward }
 
+const axes = [
+    { a: 'x', b: 'z', c: 'y' },
+    { a: 'z', b: 'x', c: 'y' },
+    { a: 'y', b: 'x', c: 'z' }]
+
+
+// Helper functions
+
+const diff = (previous, next) =>
+    ({ previous, next })
+
 const eq = (a, b) =>
     a.x === b.x && a.y === b.y && a.z === b.z
+
+const getChunkPosition = ({ x, y, z }) =>
+    ({ x: Math.floor (x / 16), y: Math.floor (y / 16), z: Math.floor (z / 16) })
+
 
 
 // Player entity class
@@ -42,28 +59,30 @@ class PlayerEntity extends Entity {
 
 export default class Player {
     camera = new Three.PerspectiveCamera (45, 1, 0.1, 1000)
+    playerEntity = new PlayerEntity ()
 
     constructor (streams, world) {
-        let playerEntity = new PlayerEntity()
-
         this.handleResizeCamera ()
         this.createEventStreams (streams)
 
         this.world = world
-        this.world.spawnEntity (initialPosition, playerEntity)
+        this.world.spawnEntity (initialPosition, this.playerEntity)
 
         this.streams.resize.onValue (this.handleResizeCamera)
         this.streams.movement.onValue (this.handleMoveCamera)
         this.streams.rotation.onValue (this.handleRotateCamera)
+        this.streams.movement
+            .map     (getChunkPosition)
+            .diff    (null, diff)
+            .filter  (({ previous, next }) => previous && !eq (previous, next))
+            .onValue (this.handleRefreshChunks)
 
         this.streams.placeBlock.onValue (this.handlePlaceBlock)
         this.streams.destroyBlock.onValue (this.handleDestroyBlock)
         this.streams.crosshairTarget
             .map     (this.getBlockPositionForFaceIndex)
-            .diff    (null, (previous, next) => [previous, next])
-            .onValue (this.handleHighlightCrosshairTarget)
-
-        this.streams.movement.onValue (this.handleRefreshChunks) }
+            .diff    (null, diff)
+            .onValue (this.handleHighlightCrosshairTarget) }
 
 
     // Create the event streams for this player
@@ -83,17 +102,17 @@ export default class Player {
                          .map    (M.getDirectionVector)
 
     createMovementStream = streams => {
-        let movementStreams = _.map (handlers, (value, key) => {
+        let movementStreams = map (handlers, (value, key) => {
             let keyCode = parseInt(key)
             let down = streams.keyDown.filter (e => e.which === keyCode)
             let up   = streams.keyUp.filter (e => e.which === keyCode)
 
             let movementWithTimeDelta =
                 down.awaiting  (up)
-                    .filter    (streams.controlsEnabled)
+                    .and       (streams.controlsEnabled)
                     .sampledBy (streams.step, (moving, dt) => ({ moving, dt }))
-                    .filter    (({ moving }) => moving)
-                    .map       (({ dt }) => dt)
+                    .filter    ('.moving')
+                    .map       ('.dt')
 
             return streams.rotation.sampledBy (movementWithTimeDelta, (rotation, dt) => ({ rotation, dt }))
                                    .map       (({ rotation, dt }) => this.getMovementVector (keyCode, rotation, dt)) })
@@ -129,7 +148,7 @@ export default class Player {
         this.camera.position.y = position.y
         this.camera.position.z = position.z }
 
-    handleHighlightCrosshairTarget = ([previous, next]) => {
+    handleHighlightCrosshairTarget = ({ previous, next }) => {
         if (next && (!previous || !eq (next, previous))) {
             this.world.setBlockHighlight (next, true) }
         if (previous && (!next || !eq (next, previous))) {
@@ -141,11 +160,17 @@ export default class Player {
     handleDestroyBlock = target =>
         this.world.destroyBlockWithFace (target.object.position, target.faceIndex)
 
-    handleRefreshChunks = position => {}
-        // for (let y = position.y - 16 * 16; y < position.y + 16 * 16; y += 16) {
-        //     for (let z = position.z - 16 * 16; z < position.z + 16 * 16; z += 16) {
-        //         let x = position.x + 16 * 16
-        //         this.world.loadChunk (x, y, z) }}}
+    handleRefreshChunks = ({ previous, next }) =>
+        axes.forEach (({ a, b, c }) => {
+            const dir = next[a] - previous[a] > 0 ? 1 : -1
+
+            for (let i = previous[a], limit = next[a]; dir > 0 ? i < limit : i > limit; i += dir) {
+                for (let j = previous[b] - RENDER_DISTANCE; j <= previous[b] + RENDER_DISTANCE; j++) {
+                    const positionsInBatch = range (-RENDER_DISTANCE - 1, RENDER_DISTANCE + 1)
+                    this.world.loadChunks (positionsInBatch.map (k => ({ [a]: i + (RENDER_DISTANCE + 1) * dir, [b]: j, [c]: k })))
+                    this.world.unloadChunks (positionsInBatch.map (k => ({ [a]: i - (RENDER_DISTANCE + 1) * dir, [b]: j, [c]: k }))) }}
+
+            previous[a] = next[a] })
 
 
     // Helper functions

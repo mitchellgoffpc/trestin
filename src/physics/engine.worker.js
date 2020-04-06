@@ -1,5 +1,5 @@
-import _ from 'lodash'
 import Cannon from 'cannon'
+import mapValues from 'lodash-es/mapValues'
 
 import Shapes from 'util/shapes'
 
@@ -29,7 +29,7 @@ self.addEventListener ("message", ({ data }) => {
 
 function step ({ dt }) {
     world.step (dt)
-    self.postMessage ({ entities: _.mapValues (entities, body => body.position) }) }
+    self.postMessage ({ entities: mapValues (entities, body => body.position) }) }
 
 function addBlock ({ uuid, position: { x, y, z }}) {
     const body = new Cannon.Body ({ shape: blockShape, mass: 0 })
