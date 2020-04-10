@@ -51,15 +51,28 @@ self.addEventListener ("message", ({ data }) => {
 // API functions
 
 function createChunkGeometryForBatch ({ chunks }) {
-    const results = map (chunks, createChunkGeometry)
-    const transfers = flatMap (results, chunk => map (chunk.buffers, 'buffer'))
+    let results = new Array (chunks.length)
+    let transfers = []
+
+    for (let i = 0; i < chunks.length; i++) {
+        results[i] = createChunkGeometry (chunks[i])
+        transfers.push (results[i].buffers.vertexBuffer.buffer,
+                        results[i].buffers.colorBuffer.buffer,
+                        results[i].buffers.blockFaceBuffer.buffer,
+                        results[i].buffers.BFBIndicesForFaces.buffer,
+                        results[i].buffers.blockIndicesForFaces.buffer,
+                        results[i].buffers.blockIndicesForBFBOffsets.buffer,
+                        results[i].buffers.BFBOffsetsForBlocks.buffer) }
+
     self.postMessage ({ message: "createChunkGeometry", chunks: results }, transfers) }
 
-function createChunkGeometry ({ position, blocks, neighbors }) {
+
+function createChunkGeometry ({ position, blocks, neighborSides }) {
     let vertexIndex = 0
     let BFBIndex = 0
     BFBOffsetsForBlocks.fill (-1)
 
+    // Loop over all the blocks in this chunk
     for (let blockIndex = 0; blockIndex < CHUNK_VOLUME; blockIndex++) {
         if (blocks[blockIndex]) {
             const block = Blocks.fromBlockID (blocks[blockIndex])
@@ -67,34 +80,39 @@ function createChunkGeometry ({ position, blocks, neighbors }) {
             let blockHasVisibleFaces = false
             faceIndices.fill (-1)
 
-            for (let i = 0; i < 6; i++) {
+            // Loop over all adjacent positions and add faces on sides without solid neighbors
+            for (let i = 0; i < Directions.All.length; i++) {
                 const direction = Directions.All[i]
                 const adjacentPosition = direction.getAdjacentPosition (position)
                 const adjacentBlock = do {
                     if (positionIsWithinChunk (adjacentPosition))
                          blocks[getBlockIndexForPosition (adjacentPosition)]
-                    else neighbors[direction][getNeighborIndexForPosition (adjacentPosition)] }
+                    else if (neighborSides[i])
+                         neighborSides[i][getNeighborIndexForPosition (adjacentPosition)]
+                    else 0 }
 
                 if (!adjacentBlock) {
-                    for (let i = 0; i < 2; i++) { // Loop twice because we need two faces per side
-                        const faceIndex = vertexIndex / 9 + i
-                        const faceBFBIndex = direction.index * 2 + i
+                    for (let j = 0; j < 2; j++) { // Loop twice because we need two faces per side
+                        const faceIndex = vertexIndex / 9 + j
+                        const faceBFBIndex = i * 2 + j
 
                         faceIndices[faceBFBIndex] = faceIndex
                         BFBIndicesForFaces[faceIndex] = faceBFBIndex
                         blockIndicesForFaces[faceIndex] = blockIndex
-                        colorBuffer.set (block.colorData[direction.index], vertexIndex + i * 9) }
+                        colorBuffer.set (block.colorData[i], vertexIndex + j * 9) }
 
                     vertexBuffer.set (getVerticesForSide (position, direction), vertexIndex)
                     vertexIndex += 18
                     blockHasVisibleFaces = true }}
 
+            // If this block has any visible faces, we'll add it to the BFB
             if (blockHasVisibleFaces) {
                 blockFaceBuffer.set (faceIndices, BFBIndex)
                 blockIndicesForBFBOffsets[BFBIndex / 12] = blockIndex
                 BFBOffsetsForBlocks[blockIndex] = BFBIndex
                 BFBIndex += 12 }}}
 
+    // Copy and slice all our buffers down to the correct sizes
     const bufferSize = nextPowerOf2 (vertexIndex / 3) * 3
     const blockFaceBufferSize = nextPowerOf2 (BFBIndex / 3) * 3
     const buffers =

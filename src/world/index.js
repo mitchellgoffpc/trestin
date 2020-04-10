@@ -27,14 +27,8 @@ const RENDER_DISTANCE = 20
 
 // Helper functions
 
-const coord = i =>
-    i >= 0 ? i % 16 : i % 16 + 16
-
 const coords = (x, y, z) =>
     `${x},${y},${z}`
-
-const getChunkPosition = ({ x, y, z }) =>
-    ({ x: coord (x), y: coord (y), z: coord (z) })
 
 
 // World class
@@ -51,10 +45,9 @@ export default class World {
     entities = {}
     chunksLoaded = 0
 
-    constructor (streams) {
-        this.streams = streams
+    constructor () {
         this.scene.background = new Three.Color (0xADCCFF)
-        this.scene.fog = new Three.Fog (0xADCCFF, (RENDER_DISTANCE - 5) * 16, (RENDER_DISTANCE - 1) * 16)
+        this.scene.fog = new Three.Fog (0xADCCFF, (RENDER_DISTANCE - 8) * 16, (RENDER_DISTANCE - 1) * 16)
         this.scene.add (new Three.AmbientLight (0x404040))
 
         const northLight = new Three.DirectionalLight (0xFFFFFF, 0.5)
@@ -70,77 +63,9 @@ export default class World {
         this.physics.onStep (this.handleEntityUpdate)
 
         // Generate chunks for the spawn area
-        for (let x = -RENDER_DISTANCE - 1; x <= RENDER_DISTANCE + 1; x++) { - 1
+        for (let x = -RENDER_DISTANCE - 1; x <= RENDER_DISTANCE + 1; x++) {
             for (let z = -RENDER_DISTANCE - 1; z <= RENDER_DISTANCE + 1; z++) {
-                this.createChunkTerrain (range (-RENDER_DISTANCE - 1, RENDER_DISTANCE + 1) .map (y => ({ x, y, z }))) }}}
-
-
-    // API methods for workers
-
-    createChunkTerrain = positions =>
-        this.terrainWorker.postMessage ({ message: 'createChunkTerrain', positions })
-
-    createChunkGeometry = (chunks, buffers) =>
-        this.geometryWorker.postMessage ({ message: 'createChunkGeometry', chunks }, buffers)
-
-
-    // Event listeners for worker messages
-
-    handleTerrainWorkerMessage = ({ data }) => {
-        let chunksToRender = []
-
-        data.chunks.forEach (({ x, y, z, blocks }) => {
-            const chunk = new Chunk (x, y, z, blocks, this)
-            this.chunks[coords (x, y, z)] = chunk
-
-            const adjacentChunks =
-                Directions.All.map (direction => direction.getAdjacentPosition ({ x, y, z }))
-                              .map (this.getChunkForCoords)
-                              .filter (x => x)
-
-            chunk.loadedNeighbors = adjacentChunks.length
-            adjacentChunks.forEach (chunk => { chunk.loadedNeighbors += 1 })
-
-            adjacentChunks.filter (this.shouldCreateGeometryForChunk)
-                          .forEach (chunk => chunksToRender.push (chunk)) })
-
-        if (chunksToRender.length) {
-            const chunks = map (chunksToRender, chunk => ({ position: chunk.position, blocks: chunk.blocks, neighbors: this.getNeighborData (chunk) }))
-            const transfers = flatMap (chunks, chunk => map (chunk.neighbors, 'buffer'))
-            this.createChunkGeometry (chunks, transfers) }}
-
-    handleGeometryWorkerMessage = ({ data }) => {
-        if (data.message === 'createChunkGeometry') {
-            this.chunksLoaded += data.chunks.length
-
-            data.chunks.forEach (({ position, buffers, vertexBufferSize, blockFaceBufferSize }) => {
-                const chunk = this.chunks[coords (position.x, position.y, position.z)]
-                chunk.createBufferGeometry (buffers, vertexBufferSize, blockFaceBufferSize) }) }}
-
-    handleEntityUpdate = ({ entities }) => {
-        entities.forEach (({ uuid, x, y, z }) => {
-            this.entities[uuid].mesh.position.set (x, y, z) }) }
-
-
-    // Methods for loading and unloading chunks
-
-    loadChunks (positions) {
-        this.createChunkTerrain (positions.filter (negate (this.getChunkForCoords))) }
-
-    unloadChunks (positions) {
-        filter (positions.map (this.getChunkForCoords)) .forEach (chunk => {
-            Directions.All.forEach (direction => {
-                const neighbor = this.getChunkForCoords (direction.getAdjacentPosition (chunk.position))
-                if (neighbor) {
-                    neighbor.loadedNeighbors -= 1
-                    if (neighbor.mesh) { this.unloadChunkGeometry (neighbor) }}})
-
-            delete this.chunks[coords (chunk.position.x, chunk.position.y, chunk.position.z)] }) }
-
-    unloadChunkGeometry (chunk) {
-        chunk.mesh.geometry.dispose ()
-        chunk.mesh.material.dispose ()
-        this.scene.remove (chunk.mesh) }
+                this.createChunkTerrain (range (-RENDER_DISTANCE - 1, RENDER_DISTANCE + 2) .map (y => ({ x, y, z }))) }}}
 
 
     // Methods for creating blocks and entities
@@ -155,15 +80,14 @@ export default class World {
         this.placeBlock (position, machine)
         this.machinery.addMachine (machine) }
 
-    spawnEntity ({ x, y, z }, entity) {
-        entity.mesh.position.set (x, y, z)
+    spawnEntity (position, entity) {
+        entity.mesh.position.set (position.x, position.y, position.z)
         this.scene.add (entity.mesh)
         this.entities[entity.uuid] = entity
 
+        if (entity.needsGameTick) { /* tick */ }
         if (entity.needsPhysicsBody) {
-            this.physics.addEntity (x, y, z, entity.uuid, entity.properties) }
-        if (entity.needsGameTick) {
-            this.streams.timer.onValue (() => entity.tick()) }}
+            this.physics.addEntity (entity.uuid, position, entity.properties) }}
 
 
     // Methods for destroying blocks and entities
@@ -189,12 +113,107 @@ export default class World {
         this.withChunk (position, (chunk, chunkPos) => chunk.removeBlockFace (chunkPos, direction)) }
 
 
+    // Methods for loading and unloading chunks
+
+    loadChunks (positions) {
+        this.createChunkTerrain (positions.filter (negate (this.getChunkAtCoords))) }
+
+    unloadChunks (positions) {
+        filter (positions.map (this.getChunkAtCoords)) .forEach (chunk => {
+            Directions.All.forEach (direction => {
+                const neighbor = this.getChunkAtCoords (direction.getAdjacentPosition (chunk.position))
+                if (neighbor) {
+                    neighbor.loadedNeighbors -= 1
+                    if (neighbor.mesh) { this.unloadChunkGeometry (neighbor) }}})
+
+            delete this.chunks[coords (chunk.position.x, chunk.position.y, chunk.position.z)] }) }
+
+    unloadChunkGeometry (chunk) {
+        chunk.mesh.geometry.dispose ()
+        chunk.mesh.material.dispose ()
+        this.scene.remove (chunk.mesh) }
+
+
+    // API methods for workers
+
+    createChunkTerrain = positions =>
+        this.terrainWorker.postMessage ({ message: 'createChunkTerrain', positions })
+
+    createChunkGeometry = chunks =>
+        this.geometryWorker.postMessage ({ message: 'createChunkGeometry', chunks })
+
+
+    // Event listeners for worker messages
+
+    handleTerrainWorkerMessage = ({ data }) => {
+        let chunksToRender = []
+
+        // Create chunk objects with the buffer data from the worker
+        data.chunks.forEach (({ position, blocks, sides, sidesAreSolid }) => {
+            if (!this.getChunkAtCoords (position)) {
+                const chunk = new Chunk (this, position, blocks, sides, sidesAreSolid)
+                this.setChunkAtCoords (position, chunk)
+
+                // This is just for testing
+                if (position.x === 0 && position.y === 0 && position.z === 0) {
+                    this.spawnEntity ({ x: 4, y: 70, z: 13.5 }, new Entity ({ shape: Shapes.SPHERE, radius: 1, mass: 5 })) }
+
+                if (this.shouldCreatePhysicsBodyForChunk (chunk))
+                    this.physics.addChunk (chunk.position, chunk.blocks)
+
+                // Update the neighbor references and counts for all adjacent chunks
+                for (let i = 0; i < Directions.All.length; i++) {
+                    const direction = Directions.All[i]
+                    const adjacentChunk = this.getChunkAtCoords (direction.getAdjacentPosition (position))
+
+                    if (adjacentChunk) {
+                        chunk.loadedNeighbors += 1
+                        adjacentChunk.loadedNeighbors += 1
+                        chunk.neighbors[i] = adjacentChunk
+                        adjacentChunk.neighbors[direction.opposite.index] = chunk
+
+                        if (this.shouldCreateGeometryForChunk (adjacentChunk))
+                            chunksToRender.push (adjacentChunk) }}}})
+
+        // Create geometry for any chunks that need to be rendered
+        if (chunksToRender.length) {
+            const chunks = new Array (chunksToRender.length)
+            for (let i = 0; i < chunksToRender.length; i++) {
+                const { position, blocks, neighbors } = chunksToRender[i]
+                const neighborSides = new Array (Directions.All.length)
+                for (let j = 0; j < Directions.All.length; j++) {
+                    if (neighbors[j].blocks) {
+                        neighborSides[j] = neighbors[j].sides[Directions.All[j].opposite.index] }}
+
+                chunks[i] = { position, blocks, neighborSides }}
+
+            this.createChunkGeometry (chunks) }}
+
+    handleGeometryWorkerMessage = ({ data }) => {
+        if (data.message === 'createChunkGeometry') {
+            this.chunksLoaded += data.chunks.length
+
+            data.chunks.forEach (({ position, buffers, vertexBufferSize, blockFaceBufferSize }) => {
+                const chunk = this.chunks[coords (position.x, position.y, position.z)]
+                chunk.createBufferGeometry (buffers, vertexBufferSize, blockFaceBufferSize) }) }}
+
+    handleEntityUpdate = ({ entities }) => {
+        entities.forEach (({ uuid, x, y, z }) => {
+            this.entities[uuid].mesh.position.set (x, y, z) }) }
+
+
+    // Update method
+
+    step (dt) {
+        this.physics.step (dt) }
+
+
     // Miscellaneous helper methods
 
-    getChunkForCoords = ({ x, y, z }) =>
+    getChunkAtCoords = ({ x, y, z }) =>
         this.chunks[coords (x, y, z)]
 
-    getChunkForPosition = ({ x, y, z }) =>
+    getChunkAtPosition = ({ x, y, z }) =>
         this.chunks[coords (Math.floor (x / 16), Math.floor (y / 16), Math.floor (z / 16))]
 
     getBlockAtPosition = position =>
@@ -210,17 +229,19 @@ export default class World {
     getClosestIntersection = (position, direction) =>
          first (sortBy (this.getIntersections (position, direction), 'distance'))
 
-    getNeighborData = chunk =>
-        mapValues (Directions.ByName, direction =>
-            this.getChunkForCoords (direction.getAdjacentPosition (chunk.position))
-                .getNeighborData (direction.opposite))
+    setChunkAtCoords ({ x, y, z }, chunk) {
+        this.chunks[coords (x, y, z)] = chunk }
 
     setBlockHighlight (position, highlight) {
         this.withChunk (position, (chunk, chunkPos) => chunk.setBlockHighlight (chunkPos, highlight)) }
 
     shouldCreateGeometryForChunk = chunk =>
-        chunk.blocks && chunk.loadedNeighbors === 6
+        chunk.blocks && chunk.loadedNeighbors === 6 &&
+        Directions.All.some (direction => !chunk.neighbors[direction.index].blocks || !chunk.neighbors[direction.index].sidesAreSolid[direction.opposite.index])
+
+    shouldCreatePhysicsBodyForChunk = ({ blocks, position: { x, y, z }}) =>
+        blocks && x >= -1 && x <= 1 && z >= -1 && z <= 1 && y >= 2 && y <= 3
 
     withChunk (position, callback) {
-        const chunk = this.getChunkForPosition (position)
+        const chunk = this.getChunkAtPosition (position)
         if (chunk) { return callback (chunk, chunk.getChunkPosFromWorldPos (position)) }}}

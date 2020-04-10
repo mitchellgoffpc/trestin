@@ -1,4 +1,6 @@
 import * as Three from 'three'
+import uuid from 'uuid/v4'
+
 import Blocks from 'blocks'
 import Directions from 'util/directions'
 import { getVerticesForSide } from 'util/geometry'
@@ -34,12 +36,16 @@ import { getBlockIndex,
 //     that isn't visible anymore.
 
 export default class Chunk {
+    neighbors = new Array (Directions.All.length)
+    loadedNeighbors = 0
     lights = {}
 
-    constructor (x, y, z, blocks, world) {
-        this.position = { x, y, z }
+    constructor (world, position, blocks, sides, sidesAreSolid) {
+        this.world = world
+        this.position = position
         this.blocks = blocks
-        this.world = world }
+        this.sides = sides
+        this.sidesAreSolid = sidesAreSolid }
 
 
     // Methods for creating objects
@@ -219,32 +225,6 @@ export default class Chunk {
         return { x: x + this.position.x * 16, y: y + this.position.y * 16, z: z + this.position.z * 16 }}
 
 
-    // Helper method for getting neighbor data
-
-    getNeighborData (direction) {
-        const result = new Int32Array (16 * 16)
-        const edge = direction.vector[direction.axis] === 1 ? 0xF : 0
-
-        if (!this.blocks) { return result }
-
-        if (direction.axis === 'x') {
-            for (let y = 0; y < 16; y++) {
-                for (let z = 0; z < 16; z++) {
-                    result[(y << 4) + z] = this.blocks[getBlockIndex (edge, y, z)] }}}
-
-        else if (direction.axis === 'y') {
-            for (let x = 0; x < 16; x++) {
-                for (let z = 0; z < 16; z++) {
-                    result[(x << 4) + z] = this.blocks[getBlockIndex (x, edge, z)] }}}
-
-        else if (direction.axis === 'z') {
-            for (let x = 0; x < 16; x++) {
-                for (let y = 0; y < 16; y++) {
-                    result[(x << 4) + y] = this.blocks[getBlockIndex (x, y, edge)] }}}
-
-        return result }
-
-
     // Create the vertex and color buffers for this chunk
 
     createBufferGeometry (buffers, vertexBufferSize, blockFaceBufferSize) {
@@ -263,11 +243,18 @@ export default class Chunk {
         geometry.computeVertexNormals ()
 
         this.mesh = new Three.Mesh (geometry, material)
+        this.mesh.name = "CHUNK"
         this.mesh.position.set (this.position.x * 16, this.position.y * 16, this.position.z * 16)
         this.world.scene.add (this.mesh) }
 
 
     // Create the Cannon physics body for this chunk
 
-    createPhysicsBody () {}
+    createPhysicsBody () {
+        let boxes = []
+        for (let x = 0; x < 16; x++) {
+            for (let z = 0; z < 16; z++) {
+                boxes.push ({ x, z, minY: 0, maxY: x + z }) }}
+
+        this.world.physics.addChunk (uuid (), this.position, boxes) }
 }

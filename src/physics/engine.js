@@ -15,14 +15,18 @@ export default class PhysicsEngine {
         this.handler = handler }
 
     // API Methods
-    step = dt => this.worker.postMessage ({ message: "step", dt: dt || 1 / 60 })
+    step = dt => this.worker.postMessage ({ message: "step", dt: dt ? dt / 1000 : 1 / 60 })
 
-    addBlock = (x, y, z, uuid) =>
-        this.worker.postMessage ({ message: "addBlock", uuid, position: { x, y, z }})
-    addEntity = (x, y, z, uuid, properties) =>
-        this.worker.postMessage ({ message: "addEntity", uuid, properties, position: { x, y, z }})
+    addChunk = (position, blocks) =>
+        this.worker.postMessage ({ message: "addChunk", position, blocks })
+    addBlock = position =>
+        this.worker.postMessage ({ message: "addBlock", position })
+    addEntity = (uuid, position, properties) =>
+        this.worker.postMessage ({ message: "addEntity", uuid, position, properties })
 
-    removeBlock = uuid =>
-        this.worker.postMessage ({ message: "removeBlock", uuid })
+    removeChunk = position =>
+        this.worker.postMessage ({ message: "removeChunk", position })
+    removeBlock = position =>
+        this.worker.postMessage ({ message: "removeBlock", position })
     removeEntity = uuid =>
         this.worker.postMessage ({ message: "removeEntity", uuid }) }

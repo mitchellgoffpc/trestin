@@ -1,4 +1,3 @@
-import Bacon from 'baconjs'
 import * as Three from 'three'
 import map from 'lodash-es/map'
 import range from 'lodash-es/range'
@@ -11,33 +10,21 @@ import Shapes from 'util/shapes'
 
 // Constants
 
-const UP = new Three.Vector3 (0, 1, 0)
-const DOWN = new Three.Vector3 (0, -1, 0)
-const SQUARE = new Three.Vector3 (1, 0, 1)
+const UP               = new Three.Vector3 (0, 1, 0)
+const INITIAL_POSITION = new Three.Vector3 (8, 48, 12)
+const INITIAL_ROTATION = new Three.Vector2 (Math.PI, 0)
+
 const RENDER_DISTANCE = 20
-
-const yLimit = Math.PI / 2 - 0.0001
-const initialRotation = new Three.Vector2 (Math.PI, 0)
-const initialPosition = new Three.Vector3 (8, 48, 12)
-
-const handlers = {
-    16: () => DOWN,
-    32: () => UP,
-    65: forward => forward.cross (DOWN),
-    68: forward => forward.cross (UP),
-    83: forward => forward.negate (),
-    87: forward => forward }
-
-const axes = [
+const AXES = [
     { a: 'x', b: 'z', c: 'y' },
     { a: 'z', b: 'x', c: 'y' },
     { a: 'y', b: 'x', c: 'z' }]
 
+const getRotatedMovementVector = (movement, rotation) =>
+    movement.clone () .applyAxisAngle (UP, rotation.x) .normalize ()
+
 
 // Helper functions
-
-const diff = (previous, next) =>
-    ({ previous, next })
 
 const eq = (a, b) =>
     a.x === b.x && a.y === b.y && a.z === b.z
@@ -58,141 +45,96 @@ class PlayerEntity extends Entity {
 // Player class
 
 export default class Player {
-    camera = new Three.PerspectiveCamera (45, 1, 0.1, 1000)
+    position = INITIAL_POSITION.clone ()
+    rotation = INITIAL_ROTATION.clone ()
+    gaze = M.getDirectionVector (INITIAL_ROTATION)
+    currentChunkPosition = getChunkPosition (INITIAL_POSITION)
+    currentCrosshairTarget = null
+
     playerEntity = new PlayerEntity ()
+    camera = new Three.PerspectiveCamera (45, 1, 0.1, 1000)
 
-    constructor (streams, world) {
-        this.handleResizeCamera ()
-        this.createEventStreams (streams)
 
+    // Constructor
+
+    constructor (world) {
         this.world = world
-        this.world.spawnEntity (initialPosition, this.playerEntity)
-
-        this.streams.resize.onValue (this.handleResizeCamera)
-        this.streams.movement.onValue (this.handleMoveCamera)
-        this.streams.rotation.onValue (this.handleRotateCamera)
-        this.streams.movement
-            .map     (getChunkPosition)
-            .diff    (null, diff)
-            .filter  (({ previous, next }) => previous && !eq (previous, next))
-            .onValue (this.handleRefreshChunks)
-
-        this.streams.placeBlock.onValue (this.handlePlaceBlock)
-        this.streams.destroyBlock.onValue (this.handleDestroyBlock)
-        this.streams.crosshairTarget
-            .map     (this.getBlockPositionForFaceIndex)
-            .diff    (null, diff)
-            .onValue (this.handleHighlightCrosshairTarget) }
+        this.world.spawnEntity (this.position, this.playerEntity) }
 
 
-    // Create the event streams for this player
+    // Event handlers
 
-    createEventStreams = streams => {
-        this.streams = { ...streams }
-        this.streams.rotation = this.createRotationStream (this.streams)
-        this.streams.movement = this.createMovementStream (this.streams)
+    handleUpdateRotation = (movementX, movementY) => {
+        let rx = this.rotation.x - movementX / 500
+        let ry = this.rotation.y + movementY / 500
+        this.rotation.x = rx % (Math.PI * 2)
+        this.rotation.y = M.clamp (ry, -Math.PI / 2 + 0.0001, Math.PI / 2 - 0.0001)
+        this.gaze = M.getDirectionVector (this.rotation) }
 
-        this.streams.crosshairTarget = this.createCrosshairTargetStream (this.streams)
-        this.streams.destroyBlock = this.createDestroyBlockStream (this.streams)
-        this.streams.placeBlock = this.createPlaceBlockStream (this.streams) }
-
-    createRotationStream = streams =>
-        streams.mouseMove.filter (streams.controlsEnabled)
-                         .scan   (initialRotation, this.getNewRotation)
-                         .map    (M.getDirectionVector)
-
-    createMovementStream = streams => {
-        let movementStreams = map (handlers, (value, key) => {
-            let keyCode = parseInt(key)
-            let down = streams.keyDown.filter (e => e.which === keyCode)
-            let up   = streams.keyUp.filter (e => e.which === keyCode)
-
-            let movementWithTimeDelta =
-                down.awaiting  (up)
-                    .and       (streams.controlsEnabled)
-                    .sampledBy (streams.step, (moving, dt) => ({ moving, dt }))
-                    .filter    ('.moving')
-                    .map       ('.dt')
-
-            return streams.rotation.sampledBy (movementWithTimeDelta, (rotation, dt) => ({ rotation, dt }))
-                                   .map       (({ rotation, dt }) => this.getMovementVector (keyCode, rotation, dt)) })
-
-        return Bacon.mergeAll (movementStreams)
-                    .scan     (initialPosition, this.getNewPosition) }
-
-    createCrosshairTargetStream = streams =>
-        Bacon.combineAsArray (streams.movement, streams.rotation)
-             .skip   (1)
-             .map    (([position, gaze]) => this.world.getClosestIntersection (position, gaze))
-
-    createPlaceBlockStream = streams =>
-        streams.leftClickDown.filter (streams.controlsEnabled)
-                             .map    (streams.crosshairTarget)
-
-    createDestroyBlockStream = streams =>
-        streams.rightClickDown.filter (streams.controlsEnabled)
-                              .map    (streams.crosshairTarget)
-
-
-    // Event stream handlers
-
-    handleResizeCamera = () => {
-        this.camera.aspect = window.innerWidth / window.innerHeight
+    handleResizeCamera = (width, height) => {
+        this.camera.aspect = width / height
         this.camera.updateProjectionMatrix () }
 
-    handleRotateCamera = gaze => {
-        this.camera.lookAt (this.camera.position.clone () .add (gaze)) }
-
-    handleMoveCamera = position => {
-        this.camera.position.x = position.x
-        this.camera.position.y = position.y
-        this.camera.position.z = position.z }
-
-    handleHighlightCrosshairTarget = ({ previous, next }) => {
+    handleHighlightCrosshairTarget = (previous, next) => {
         if (next && (!previous || !eq (next, previous))) {
             this.world.setBlockHighlight (next, true) }
         if (previous && (!next || !eq (next, previous))) {
             this.world.setBlockHighlight (previous, false) }}
 
-    handlePlaceBlock = target =>
-        this.world.placeBlockOnChunkFace (target.object.position, target.faceIndex, Blocks.Grass)
+    handlePlaceBlock = () => {
+        const target = this.currentCrosshairTarget
+        if (target) this.world.placeBlockOnChunkFace (target.object.position, target.faceIndex, Blocks.Grass) }
 
-    handleDestroyBlock = target =>
-        this.world.destroyBlockWithFace (target.object.position, target.faceIndex)
+    handleDestroyBlock = () => {
+        const target = this.currentCrosshairTarget
+        if (target) this.world.destroyBlockWithFace (target.object.position, target.faceIndex) }
 
-    handleRefreshChunks = ({ previous, next }) =>
-        axes.forEach (({ a, b, c }) => {
-            const dir = next[a] - previous[a] > 0 ? 1 : -1
+    handleRefreshChunks = (previous, next) => {
+        if (previous && !eq (previous, next)) {
+            console.log (next)
+            AXES.forEach (({ a, b, c }) => {
+                const dir = next[a] - previous[a] > 0 ? 1 : -1
+                const prevA = previous[a], prevB = previous[b]
 
-            for (let i = previous[a], limit = next[a]; dir > 0 ? i < limit : i > limit; i += dir) {
-                for (let j = previous[b] - RENDER_DISTANCE; j <= previous[b] + RENDER_DISTANCE; j++) {
-                    const positionsInBatch = range (-RENDER_DISTANCE - 1, RENDER_DISTANCE + 1)
-                    this.world.loadChunks (positionsInBatch.map (k => ({ [a]: i + (RENDER_DISTANCE + 1) * dir, [b]: j, [c]: k })))
-                    this.world.unloadChunks (positionsInBatch.map (k => ({ [a]: i - (RENDER_DISTANCE + 1) * dir, [b]: j, [c]: k }))) }}
+                process.nextTick(() => {
+                    for (let i = prevA, limit = next[a]; dir > 0 ? i < limit : i > limit; i += dir) {
+                        for (let j = prevB - RENDER_DISTANCE; j <= prevB + RENDER_DISTANCE; j++) {
+                            const positionsInBatch = range (-RENDER_DISTANCE - 1, RENDER_DISTANCE + 2)
+                            // this.world.loadChunks (positionsInBatch.map (k => ({ [a]: i + (RENDER_DISTANCE + 1) * dir, [b]: j, [c]: k })))
+                            // this.world.unloadChunks (positionsInBatch.map (k => ({ [a]: i - (RENDER_DISTANCE + 1) * dir, [b]: j, [c]: k })))
+                        }}})
 
-            previous[a] = next[a] })
+                previous[a] = next[a] }) }}
 
 
-    // Helper functions
+    // Update handler method
 
-    getMovementVector = (keyCode, gaze, dt) =>
-        handlers[keyCode] (gaze.clone ()
-                               .multiply (SQUARE)
-                               .normalize ())
-            .clone ()
-            .multiplyScalar (dt / 16)
+    step (dt, movement) {
+        // Update our position
+        this.position.addScaledVector (getRotatedMovementVector (movement, this.rotation), dt / 120)
 
-    getNewPosition = (position, movement) =>
-        position.addScaledVector (movement, 0.1)
+        // Update the camera's position and rotation
+        this.camera.position.x = this.position.x
+        this.camera.position.y = this.position.y
+        this.camera.position.z = this.position.z
+        this.camera.lookAt (this.camera.position.clone () .add (this.gaze))
 
-    getNewRotation = (rotation, e) => {
-        let dx = rotation.x - e.movementX / 500
-        let dy = rotation.y + e.movementY / 500
-        let rx = dx % (Math.PI * 2)
-        let ry = M.clamp (dy, -yLimit, yLimit)
-        return new Three.Vector2 (rx, ry) }
+        // // Update the crosshair target
+        // const newCrosshairTarget = this.getBlockPositionForCrosshairTarget ()
+        // this.handleHighlightCrosshairTarget (this.currentCrosshairTarget, newCrosshairTarget)
+        // this.currentCrosshairTarget = newCrosshairTarget
 
-    getBlockPositionForFaceIndex = target => do {
-        if (target)
-             this.world.getBlockPositionForFaceIndex (target.object.position, target.faceIndex)
-        else null }}
+        // // Update the surrounding chunks
+        // const newChunkPosition = getChunkPosition (this.position)
+        // this.handleRefreshChunks (this.currentChunkPosition, newChunkPosition)
+        // this.currentChunkPosition = newChunkPosition
+    }
+
+
+    // Helper methods
+
+    getBlockPositionForCrosshairTarget () {
+        const target = this.world.getClosestIntersection (this.position, this.gaze)
+        if (target && target.distance < 10 && target.object.name === "CHUNK")
+             return this.world.getBlockPositionForFaceIndex (target.object.position, target.faceIndex)
+        else return null }}

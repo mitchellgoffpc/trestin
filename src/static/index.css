@@ -17,3 +17,11 @@ canvas {
     stroke: #FFF;
     stroke-width: 1.5;
     stroke-linecap: round; }
+
+#frame-rate {
+    position: absolute;
+    z-index: 5;
+    top: 20px;
+    left: 20px;
+    font-family: Helvetica, sans-serif;
+    font-size: 16px; }
