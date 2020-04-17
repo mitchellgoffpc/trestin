@@ -6,6 +6,7 @@ import World from 'world'
 import Directions from 'util/directions'
 
 
+
 // Constants
 
 const UP = new Three.Vector3 (0, 1, 0)
@@ -30,9 +31,9 @@ const getMovementVector = activeKeys =>
 // Application entry point
 
 window.addEventListener("load", () => {
-    let world = new World ()
-    let player = new Player (world)
-    let renderer = new Three.WebGLRenderer ({ antialias: true })
+    const renderer = new Three.WebGLRenderer ({ antialias: true })
+    const world = new World ()
+    const player = new Player (world)
 
     let activeKeys = new Set ()
     let controlsAreEnabled = false

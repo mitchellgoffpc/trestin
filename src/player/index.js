@@ -54,9 +54,6 @@ export default class Player {
     playerEntity = new PlayerEntity ()
     camera = new Three.PerspectiveCamera (45, 1, 0.1, 1000)
 
-
-    // Constructor
-
     constructor (world) {
         this.world = world
         this.world.spawnEntity (this.position, this.playerEntity) }
@@ -114,9 +111,7 @@ export default class Player {
         this.position.addScaledVector (getRotatedMovementVector (movement, this.rotation), dt / 120)
 
         // Update the camera's position and rotation
-        this.camera.position.x = this.position.x
-        this.camera.position.y = this.position.y
-        this.camera.position.z = this.position.z
+        this.camera.position.set (this.position.x, this.position.y, this.position.z)
         this.camera.lookAt (this.camera.position.clone () .add (this.gaze))
 
         // // Update the crosshair target

@@ -154,13 +154,6 @@ export default class World {
                 const chunk = new Chunk (this, position, blocks, sides, sidesAreSolid)
                 this.setChunkAtCoords (position, chunk)
 
-                // This is just for testing
-                if (position.x === 0 && position.y === 0 && position.z === 0) {
-                    this.spawnEntity ({ x: 4, y: 70, z: 13.5 }, new Entity ({ shape: Shapes.SPHERE, radius: 1, mass: 5 })) }
-
-                if (this.shouldCreatePhysicsBodyForChunk (chunk))
-                    this.physics.addChunk (chunk.position, chunk.blocks)
-
                 // Update the neighbor references and counts for all adjacent chunks
                 for (let i = 0; i < Directions.All.length; i++) {
                     const direction = Directions.All[i]
@@ -195,11 +188,17 @@ export default class World {
 
             data.chunks.forEach (({ position, buffers, vertexBufferSize, blockFaceBufferSize }) => {
                 const chunk = this.chunks[coords (position.x, position.y, position.z)]
-                chunk.createBufferGeometry (buffers, vertexBufferSize, blockFaceBufferSize) }) }}
+                chunk.createBufferGeometry (buffers, vertexBufferSize, blockFaceBufferSize)
 
-    handleEntityUpdate = ({ entities }) => {
-        entities.forEach (({ uuid, x, y, z }) => {
-            this.entities[uuid].mesh.position.set (x, y, z) }) }
+                // This is just for testing
+                if (position.x === 0 && position.y === 2 && position.z === 0) {
+                    this.spawnEntity ({ x: 4, y: 60, z: 13.5 }, new Entity ({ shape: Shapes.SPHERE, radius: 1, mass: 5 })) }
+
+                if (this.shouldCreatePhysicsBodyForChunk (position))
+                    this.physics.addChunk (position, buffers.vertexBuffer, vertexBufferSize) }) }}
+
+    handleEntityUpdate = (uuid, position) => {
+        this.entities[uuid].mesh.position.copy (position) }
 
 
     // Update method
@@ -239,8 +238,8 @@ export default class World {
         chunk.blocks && chunk.loadedNeighbors === 6 &&
         Directions.All.some (direction => !chunk.neighbors[direction.index].blocks || !chunk.neighbors[direction.index].sidesAreSolid[direction.opposite.index])
 
-    shouldCreatePhysicsBodyForChunk = ({ blocks, position: { x, y, z }}) =>
-        blocks && x >= -1 && x <= 1 && z >= -1 && z <= 1 && y >= 2 && y <= 3
+    shouldCreatePhysicsBodyForChunk = ({ x, y, z }) =>
+        x >= -1 && x <= 1 && z >= -1 && z <= 1 && y >= 1 && y <= 3
 
     withChunk (position, callback) {
         const chunk = this.getChunkAtPosition (position)

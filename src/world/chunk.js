@@ -237,8 +237,8 @@ export default class Chunk {
         const geometry = new Three.BufferGeometry ()
         const material = new Three.MeshLambertMaterial ({ vertexColors: Three.VertexColors })
 
-        geometry.addAttribute ('position', new Three.BufferAttribute (buffers.vertexBuffer, 3))
-        geometry.addAttribute ('color',    new Three.BufferAttribute (buffers.colorBuffer, 3))
+        geometry.setAttribute ('position', new Three.BufferAttribute (buffers.vertexBuffer, 3))
+        geometry.setAttribute ('color',    new Three.BufferAttribute (buffers.colorBuffer, 3))
         geometry.setDrawRange (0, vertexBufferSize / 3)
         geometry.computeVertexNormals ()
 
